@@ -1,0 +1,9 @@
+[project]
+name = "erp-module"
+version = "0.1.0"
+description = "Interactive teaching module for EEG epoching and ERPs (BCI course, CS5109)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["backend/tests"]
