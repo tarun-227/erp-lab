@@ -11,12 +11,13 @@ out the main areas; you can skip it.
 | Area | What it holds |
 |---|---|
 | Top bar | The six steps (keys **1–6** jump between them), the light/dark toggle, and the book icon that opens the side panel |
-| Left panel | The parameters for the current step. Hover any ⓘ for a short explanation |
+| Left panel | The controls for the current step. Hover any ⓘ for a short explanation. Drag its right edge to resize it (or focus the edge and use ← / →, Shift for bigger steps; double-click resets), and collapse it to a slim rail with the panel button or the **[** key. Its width is remembered |
 | Centre | The plots for the current step |
 | Right panel | **Explain**: background, "Try this" ideas and questions for the current step. **Tutor**: the AI tutor (optional) |
 
-Every plot has an **Explain this plot** button (asks the tutor about that plot) and Plotly's toolbar
-(zoom, pan, and the camera icon to save a PNG).
+Every plot has an **Explain this plot** button (asks the tutor about that plot), an **Enlarge** button that
+opens it almost full-screen (Esc or Close returns it), and Plotly's toolbar (zoom, pan, and the camera icon
+to save a PNG). For the biggest plots, collapse the left panel and close the Guide.
 
 ## 1. Load data
 
@@ -36,7 +37,7 @@ The summary shows channels, sampling rate, duration and the events found.
 
 Tick the event codes you want to analyse and name them; each becomes one condition with its own colour
 throughout the app. The timeline shows when every event happened; drag the slider under it to zoom.
-**Presets** set up a standard analysis in one click (*ERN (errors vs correct)* or *Flanker P3*); **Undo** reverts the last preset or suggestion.
+**Quick start** (on this step) sets up a standard analysis across all the later steps in one click (*ERN (errors vs correct)* or *Flanker P3*); **Undo** reverts the last preset or suggestion.
 
 ## 3. Epoching
 
@@ -71,10 +72,18 @@ A notification appears whenever a change alters how many epochs are kept.
   difference. **Neg. up** flips the y-axis, a common ERP convention.
 - **Scalp map**: the voltage over the head at the cursor time, for one condition or the difference. Press
   **Play** to animate it. Click an electrode to plot its ERP.
-- **Peak table**: peak latency, peak amplitude and mean amplitude in the window, per condition.
+- **Where and when do the conditions differ? (signed r²)**: every channel (front to back) × time, coloured by how
+  well the voltage separates the two conditions trial by trial; red where the second condition is more positive.
+  This is the standard BCI view for choosing channels and time windows (Blankertz et al., 2011). Click a cell to
+  plot that channel and move the time cursor there.
+- **Measurements table**: trials, mean amplitude, its standardized measurement error (SME, Luck et al. 2021),
+  peak latency, peak amplitude and 50% area latency, per condition and for the difference. Hover a column name
+  for its definition.
+- Every waveform plot states its reference, filter and baseline, and the scalp map states its interpolation and
+  reference, as the Keil et al. (2014) publication checklist asks.
 - **Why averaging works**: the noise left after averaging N trials, against the 1/√N prediction.
 
-In the left panel, **Component** buttons set a typical window (N1, P300, N170, ERN) and **Trials
+In the left panel, **Component** buttons set a typical window (N1, P300, ERN, and Pe, the error positivity after the ERN) and **Trials
 averaged** uses only the first N kept trials of each condition. Slide it from 1 upwards to watch the ERP
 emerge from the noise.
 

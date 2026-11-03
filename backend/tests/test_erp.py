@@ -58,3 +58,47 @@ def test_pipeline_finds_a_p3_after_stimuli(sample, codes, params):
     out = _run(sample, stim)
     for cond in out["conditions"]:
         assert cond["peak"]["amplitude_uv"] > 2
+
+
+def test_signed_r2_matches_point_biserial_correlation():
+    from scipy.stats import pointbiserialr
+
+    rng = np.random.default_rng(3)
+    a = rng.normal(0, 1, (30, 5))
+    b = rng.normal(0.8, 1, (20, 5))
+    r2 = erp.signed_r2(a, b)
+    labels = np.r_[np.zeros(30), np.ones(20)]
+    for j in range(5):
+        r, _ = pointbiserialr(labels, np.r_[a[:, j], b[:, j]])
+        assert np.isclose(r2[j], np.sign(r) * r**2)
+    assert (r2 > 0).sum() >= 4  # b is larger, so the sign follows b − a
+
+
+def test_sme_is_sd_of_trial_scores_over_root_n():
+    times = np.linspace(0, 1, 11)
+    trials = np.array([[1.0] * 11, [3.0] * 11, [5.0] * 11, [7.0] * 11])
+    sme = erp.sme_mean_amplitude(trials, times, (0.2, 0.6))
+    assert np.isclose(sme, np.std([1, 3, 5, 7], ddof=1) / 2)
+
+
+def test_area_latency_splits_the_component_area_in_half():
+    times = np.linspace(0, 1, 1001)
+    wave = -np.exp(-((times - 0.4) ** 2) / 0.002)  # symmetric negative bump at 400 ms
+    assert abs(erp.area_latency(times, wave, (0.2, 0.6), "negative") - 0.4) < 0.002
+    assert erp.area_latency(times, wave, (0.2, 0.6), "positive") is None  # no positive area
+
+
+def test_signed_r2_map_shows_the_ern_and_sme_is_reported(sample, params):
+    out = _run(sample, params)
+    disc = out["discriminability"]
+    assert disc["label"] == "error − correct"
+    values = np.array(disc["values"])
+    assert values.shape == (len(out["ch_names"]), len(out["times"]))
+    assert disc["ch_names"][0].upper().startswith("FP")  # ordered front to back
+    times = np.array(out["times"])
+    fcz = values[disc["ch_names"].index("FCz")]
+    assert fcz[(times >= 0) & (times <= 0.1)].min() < -0.02  # errors more negative right after the response
+    errors = next(c for c in out["conditions"] if c["name"] == "error")
+    correct = next(c for c in out["conditions"] if c["name"] == "correct")
+    assert errors["sme_uv"] > correct["sme_uv"] > 0  # far fewer error trials, so a noisier score
+    assert 0 <= out["difference"]["area50_latency_s"] <= 0.1

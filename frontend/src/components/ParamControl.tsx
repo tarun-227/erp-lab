@@ -1,4 +1,4 @@
-import { InfoIcon } from 'lucide-react'
+import { InfoIcon, LightbulbIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
@@ -8,8 +8,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 function HelpTip({ label, help }: { label: string; help: string }) {
   return (
     <Tooltip>
-      <TooltipTrigger aria-label={`About ${label}`} className="text-muted-foreground hover:text-foreground rounded-sm">
-        <InfoIcon className="size-3.5" />
+      <TooltipTrigger
+        aria-label={`About ${label}`}
+        className="text-muted-foreground hover:text-primary -m-1.5 flex size-7 items-center justify-center rounded-full transition-colors"
+      >
+        <InfoIcon className="size-4" />
       </TooltipTrigger>
       <TooltipContent side="right" className="max-w-64">
         {help}
@@ -20,14 +23,14 @@ function HelpTip({ label, help }: { label: string; help: string }) {
 
 function ControlHeader({ id, label, help, value }: { id: string; label: string; help: string; value: ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
       <div className="flex items-center gap-1.5">
-        <Label htmlFor={id} className="text-sm font-medium">
+        <Label htmlFor={id} className="text-[15px] font-medium">
           {label}
         </Label>
         <HelpTip label={label} help={help} />
       </div>
-      <span className="text-muted-foreground font-mono text-xs tabular-nums">{value}</span>
+      <span className="bg-primary-soft text-secondary-foreground rounded-md px-2 py-0.5 font-mono text-[13px] whitespace-nowrap tabular">{value}</span>
     </div>
   )
 }
@@ -47,7 +50,7 @@ interface ParamControlProps {
 
 export function ParamControl({ id, label, value, min, max, step, help, format, onChange }: ParamControlProps) {
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-1.5">
       <ControlHeader id={id} label={label} help={help} value={format ? format(value) : value} />
       <Slider
         id={id}
@@ -77,7 +80,7 @@ interface RangeControlProps {
 
 export function RangeControl({ id, label, value, min, max, step, help, format, minGap = step, onChange }: RangeControlProps) {
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-1.5">
       <ControlHeader id={id} label={label} help={help} value={`${format(value[0])} → ${format(value[1])}`} />
       <Slider
         id={id}
@@ -108,7 +111,7 @@ export function SelectControl({ id, label, value, options, help, onChange }: Sel
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
-        <Label htmlFor={id} className="text-sm font-medium">
+        <Label htmlFor={id} className="text-[15px] font-medium">
           {label}
         </Label>
         <HelpTip label={label} help={help} />
@@ -117,7 +120,7 @@ export function SelectControl({ id, label, value, options, help, onChange }: Sel
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="border-input bg-background focus-visible:ring-ring/50 h-8 w-full rounded-lg border px-2 text-sm outline-none focus-visible:ring-3"
+        className="border-input bg-card hover:border-primary/40 h-10 w-full rounded-xl border px-3 text-[15px] transition-colors"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -139,9 +142,9 @@ interface SwitchControlProps {
 
 export function SwitchControl({ id, label, checked, help, onChange }: SwitchControlProps) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
       <div className="flex items-center gap-1.5">
-        <Label htmlFor={id} className="text-sm font-medium">
+        <Label htmlFor={id} className="text-[15px] font-medium">
           {label}
         </Label>
         <HelpTip label={label} help={help} />
@@ -153,8 +156,8 @@ export function SwitchControl({ id, label, checked, help, onChange }: SwitchCont
 
 export function PanelSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-4">
-      <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{title}</h3>
+    <section className="space-y-4 border-t pt-5 first:border-t-0 first:pt-0">
+      <h2 className="font-heading text-[15px] font-extrabold">{title}</h2>
       {children}
     </section>
   )
@@ -162,8 +165,9 @@ export function PanelSection({ title, children }: { title: string; children: Rea
 
 export function Nudge({ children }: { children: ReactNode }) {
   return (
-    <p className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
-      {children}
+    <p role="note" className="bg-warning-soft text-warning flex gap-2 rounded-xl px-3 py-2.5 text-sm leading-snug">
+      <LightbulbIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>{children}</span>
     </p>
   )
 }

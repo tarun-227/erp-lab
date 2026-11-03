@@ -5,6 +5,8 @@ Only parameters and summary numbers go in; raw EEG and per-trial data never leav
 
 from __future__ import annotations
 
+import numpy as np
+
 from ..sessions import Session
 
 STEP_NAMES = {
@@ -58,11 +60,22 @@ def build_context(session: Session | None, step: str) -> str:
         if c["n_kept"]:
             lines.append(
                 f"Condition '{c['name']}' (code {c['code']}): {c['n_kept']} of {c['n_total']} epochs kept; "
-                f"peak {_peak(c.get('peak'))}; mean amplitude in window {c['mean_amplitude_uv']:+.2f} µV."
+                f"peak {_peak(c.get('peak'))}; mean amplitude in window {c['mean_amplitude_uv']:+.2f} µV"
+                + (f" (SME {c['sme_uv']:.2f} µV)" if c.get("sme_uv") is not None else "")
+                + (f"; 50% area latency {_ms(c['area50_latency_s'])}" if c.get("area50_latency_s") is not None else "")
+                + "."
             )
         else:
             lines.append(f"Condition '{c['name']}' (code {c['code']}): no epochs kept.")
     if r.get("difference"):
         diff = r["difference"]
         lines.append(f"Difference wave {diff['label']}: peak {_peak(diff['peak'])}.")
+    disc = r.get("discriminability")
+    if disc:
+        values = np.array(disc["values"])
+        ch, t = np.unravel_index(np.abs(values).argmax(), values.shape)
+        lines.append(
+            f"Signed r² map ({disc['label']}): strongest separation {values[ch, t]:+.3f} at {disc['ch_names'][ch]}, "
+            f"{_ms(r['times'][t])}."
+        )
     return "\n".join(lines)

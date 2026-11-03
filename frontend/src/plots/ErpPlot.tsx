@@ -6,6 +6,7 @@ import { PlotCard } from '@/components/PlotCard'
 import { useErpWaves } from '@/hooks/useErp'
 import { useConditionColors, usePlotTheme } from '@/hooks/usePlotTheme'
 import { hexToRgba } from '@/lib/colors'
+import { baselineLabel, filterLabel, referenceLabel } from '@/lib/describe'
 import type { ProcessResult } from '@/lib/types'
 import { useAppStore } from '@/store/useAppStore'
 import { PlotlyChart, baseLayout } from './PlotlyChart'
@@ -80,11 +81,24 @@ export function ErpPlot({ result }: { result: ProcessResult }) {
       shapes,
       hovermode: 'x unified',
       xaxis: { title: { text: 'Time from event (s)' } },
-      yaxis: { title: { text: `${result.channel} (µV)` }, autorange: negativeUp ? 'reversed' : true },
-      annotations: [{ xref: 'x', yref: 'paper', x: (params.peak_start + params.peak_end) / 2, y: 1, yanchor: 'bottom', text: 'peak window', showarrow: false, font: { size: 10, color: theme.muted } }],
+      yaxis: { title: { text: `${result.channel} (µV, ${negativeUp ? 'negative' : 'positive'} up)` }, autorange: negativeUp ? 'reversed' : true },
+      annotations: [
+        { xref: 'x', yref: 'paper', x: (params.peak_start + params.peak_end) / 2, y: 1, yanchor: 'bottom', text: 'peak window', showarrow: false, font: { size: 11, color: theme.muted } },
+        ...(params.baseline
+          ? [{ xref: 'x' as const, yref: 'paper' as const, x: (params.baseline_start + params.baseline_end) / 2, y: 0.045, yanchor: 'bottom' as const, text: 'baseline', showarrow: false, font: { size: 11, color: theme.muted } }]
+          : []),
+      ],
     })
     return { traces, layout }
   }, [erp, result, params, cursor, ghost, highlight, showCI, showDiff, negativeUp, theme, colorOf])
+
+  const summary = erp
+    ? `ERP at ${result.channel}. ` +
+      erp.waves
+        .filter((w) => w.peak)
+        .map((w) => `${w.name}: peak ${w.peak!.amplitude_uv.toFixed(1)} µV at ${Math.round(w.peak!.latency_s * 1000)} ms from ${w.n} trials`)
+        .join('; ')
+    : `ERP at ${result.channel}`
 
   const pin = () => {
     if (!erp) return
@@ -96,15 +110,23 @@ export function ErpPlot({ result }: { result: ProcessResult }) {
     <PlotCard
       id="erp"
       title={`ERP at ${result.channel}`}
-      subtitle="Click anywhere on the plot to move the time cursor; the scalp map follows it. Shaded bands are 95% confidence intervals."
+      subtitle={
+        <>
+          <span className="text-foreground font-medium">
+            {referenceLabel(params.reference)} · {filterLabel(params)} · {baselineLabel(params)}
+          </span>
+          <br />
+          Click anywhere to move the time cursor; the scalp map follows it. Shaded bands are 95% confidence intervals.
+        </>
+      }
       help="The average of all kept epochs for each condition. The diamond marks the peak inside the shaded window. Pin the current curves, change a parameter, and compare."
       actions={
         <>
-          <Button variant={showCI ? 'secondary' : 'outline'} size="sm" onClick={() => setShowCI(!showCI)}>CI</Button>
+          <Button variant={showCI ? 'secondary' : 'outline'} size="sm" aria-pressed={showCI} onClick={() => setShowCI(!showCI)}>Confidence bands</Button>
           {erp?.difference && (
-            <Button variant={showDiff ? 'secondary' : 'outline'} size="sm" onClick={() => setShowDiff(!showDiff)}>Difference</Button>
+            <Button variant={showDiff ? 'secondary' : 'outline'} size="sm" aria-pressed={showDiff} onClick={() => setShowDiff(!showDiff)}>Difference wave</Button>
           )}
-          <Button variant={negativeUp ? 'secondary' : 'outline'} size="sm" title="Plot negative voltages upwards (a common ERP convention)" onClick={() => setNegativeUp(!negativeUp)}>
+          <Button variant={negativeUp ? 'secondary' : 'outline'} size="sm" aria-pressed={negativeUp} title="Plot negative voltages upwards (a common ERP convention)" onClick={() => setNegativeUp(!negativeUp)}>
             <ArrowDownUpIcon /> Neg. up
           </Button>
           {ghost ? (
@@ -117,7 +139,7 @@ export function ErpPlot({ result }: { result: ProcessResult }) {
     >
       {figure && (
         <PlotlyChart
-          id="erp" label={`ERP waveforms at ${result.channel}`} data={figure.traces} layout={figure.layout} height={360}
+          id="erp" label={summary} data={figure.traces} layout={figure.layout} height={480}
           onClick={(e) => setCursor(Number(e.points[0]?.x))}
         />
       )}

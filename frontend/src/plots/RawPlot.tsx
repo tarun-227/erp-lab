@@ -80,6 +80,7 @@ export function RawPlot({ result }: { result: ProcessResult }) {
     const t0 = raw.times[0] ?? start
     const t1 = raw.times[raw.times.length - 1] ?? start + WINDOW_S
     const shapes: Partial<P.Shape>[] = []
+    const annotations: Partial<P.Annotations>[] = []
     result.event_times_s.forEach((onset, i) => {
       if (onset + params.tmax < t0 || onset + params.tmin > t1) return
       const kept = result.kept[i]
@@ -94,6 +95,13 @@ export function RawPlot({ result }: { result: ProcessResult }) {
         type: 'line', xref: 'x', yref: 'paper', x0: onset, x1: onset, y0: 0, y1: 1,
         line: { color: kept ? color : REJECT_COLOR, width: 1, dash: 'dot' },
       })
+      // Colour is not the only cue: rejected epochs are also labelled in words.
+      if (!kept) {
+        annotations.push({
+          xref: 'x', yref: 'paper', x: onset + (params.tmin + params.tmax) / 2, y: 1, yanchor: 'bottom',
+          text: 'rejected', showarrow: false, font: { size: 11, color: REJECT_COLOR },
+        })
+      }
     })
     if (highlight?.plot === 'raw' && highlight.start_s !== undefined && highlight.end_s !== undefined) {
       shapes.push({
@@ -102,8 +110,9 @@ export function RawPlot({ result }: { result: ProcessResult }) {
       })
     }
     const layout = baseLayout(theme, {
-      margin: { l: 48, r: 12, t: 8, b: 40 },
+      margin: { l: 48, r: 12, t: 22, b: 40 },
       shapes,
+      annotations,
       xaxis: { title: { text: 'Time in recording (s)' }, range: [t0, t1] },
       yaxis: {
         tickvals: raw.ch_names.map((_, i) => -i * spacing),
@@ -115,7 +124,7 @@ export function RawPlot({ result }: { result: ProcessResult }) {
       },
       hovermode: 'closest',
     })
-    return { traces, layout, height: Math.min(520, 120 + raw.ch_names.length * 18) }
+    return { traces, layout, height: Math.min(720, 140 + raw.ch_names.length * 22) }
   }, [raw, result, params.tmin, params.tmax, selected, highlight, theme, colorOf, start])
 
   const onClick = (e: P.PlotMouseEvent) => {
@@ -157,7 +166,7 @@ export function RawPlot({ result }: { result: ProcessResult }) {
       }
     >
       {figure ? (
-        <PlotlyChart id="raw" label="Continuous EEG with epoch windows" data={figure.traces} layout={figure.layout} height={figure.height} onClick={onClick} />
+        <PlotlyChart id="raw" label={`Continuous EEG from ${start.toFixed(0)} to ${(start + WINDOW_S).toFixed(0)} s with epoch windows; ${result.drop.kept} of ${result.drop.total_events} epochs kept overall`} data={figure.traces} layout={figure.layout} height={figure.height} onClick={onClick} />
       ) : (
         <div className="bg-muted/40 h-72 animate-pulse rounded-lg" />
       )}

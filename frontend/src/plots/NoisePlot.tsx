@@ -53,7 +53,7 @@ export function NoisePlot({ result }: { result: ProcessResult }) {
       help="Random noise shrinks with the square root of the number of trials: 4× the trials halves the noise. If the measured line sits above the prediction, the noise is not independent across trials (for example slow drifts)."
     >
       {figure ? (
-        <PlotlyChart id="noise" label="Noise versus number of trials" data={figure.traces} layout={figure.layout} height={240} />
+        <PlotlyChart id="noise" label="Noise versus number of trials" data={figure.traces} layout={figure.layout} height={320} />
       ) : (
         <p className="text-muted-foreground py-8 text-center text-sm">Need at least two kept trials and a baseline window.</p>
       )}

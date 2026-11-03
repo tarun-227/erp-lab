@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { ExplainDrawer } from '@/components/ExplainDrawer'
+import { SidePanel } from '@/components/SidePanel'
 import { TopBar } from '@/components/TopBar'
 import { Tour } from '@/components/Tour'
 import { decodeParams } from '@/lib/share'
@@ -8,18 +9,19 @@ import { type StepId, canVisit, stepForKey } from '@/lib/steps'
 import { EpochingMain, EpochingPanel } from '@/steps/EpochingStep'
 import { ErpMain, ErpPanel } from '@/steps/ErpStep'
 import { EventsMain, EventsPanel } from '@/steps/EventsStep'
-import { ExportMain, ExportPanel } from '@/steps/ExportStep'
+import { ExportMain } from '@/steps/ExportStep'
 import { LearnMain, LearnPanel } from '@/steps/LearnStep'
 import { LoadMain, LoadPanel } from '@/steps/LoadStep'
 import { useAppStore } from '@/store/useAppStore'
 
-const VIEWS: Record<StepId, { Panel: () => React.ReactNode; Main: () => React.ReactNode }> = {
+// Steps without controls (Export) have no Panel, so their main content gets the full width.
+const VIEWS: Record<StepId, { Panel?: () => React.ReactNode; Main: () => React.ReactNode }> = {
   load: { Panel: LoadPanel, Main: LoadMain },
   events: { Panel: EventsPanel, Main: EventsMain },
   epoching: { Panel: EpochingPanel, Main: EpochingMain },
   erp: { Panel: ErpPanel, Main: ErpMain },
   learn: { Panel: LearnPanel, Main: LearnMain },
-  export: { Panel: ExportPanel, Main: ExportMain },
+  export: { Main: ExportMain },
 }
 
 function useShortcuts() {
@@ -31,6 +33,10 @@ function useShortcuts() {
       const el = e.target instanceof HTMLElement ? e.target : null
       if (e.altKey || e.ctrlKey || e.metaKey) return
       if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.getAttribute('role') === 'slider')) return
+      if (e.key === '[') {
+        useAppStore.getState().togglePanel()
+        return
+      }
       const step = stepForKey(e.key)
       if (step && canVisit(step, hasData)) {
         setStep(step)
@@ -64,29 +70,44 @@ function useSharedParams() {
   }, [])
 }
 
+/** After a step change, move focus to the new step's title so screen readers announce it. */
+function useFocusOnStepChange(step: StepId) {
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) {
+      first.current = false
+      return
+    }
+    const id = requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>('[data-step-title]')?.focus({ preventScroll: true })
+      document.getElementById('main')?.scrollTo({ top: 0 })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [step])
+}
+
 export default function App() {
   const step = useAppStore((s) => s.step)
   const hasData = useAppStore((s) => s.dataset !== null && s.params !== null)
   const drawerOpen = useAppStore((s) => s.drawerOpen)
   useShortcuts()
   useSharedParams()
+  useFocusOnStepChange(step)
   const { Panel, Main } = VIEWS[hasData ? step : 'load']
 
   return (
     <div className="flex h-dvh flex-col">
-      <a href="#main" className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-2">
+      <a href="#main" className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-xl focus:px-4 focus:py-2">
         Skip to content
       </a>
       <TopBar />
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <aside
-          aria-label="Parameters"
-          data-tour="panel"
-          className="bg-muted/30 max-h-[45vh] shrink-0 overflow-y-auto border-b p-5 md:max-h-none md:w-80 md:border-r md:border-b-0"
-        >
-          <Panel />
-        </aside>
-        <main id="main" data-tour="main" className="min-w-0 flex-1 overflow-y-auto p-6 lg:p-8">
+        {Panel && (
+          <SidePanel>
+            <Panel />
+          </SidePanel>
+        )}
+        <main id="main" data-tour="main" className="@container min-w-0 flex-1 overflow-y-auto px-5 py-6 [scrollbar-gutter:stable] lg:px-10 lg:py-8">
           <Main />
         </main>
         {drawerOpen && <ExplainDrawer />}

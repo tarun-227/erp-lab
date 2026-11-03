@@ -54,6 +54,9 @@ export interface ConditionResult {
   ci?: number[]
   peak?: Peak | null
   mean_amplitude_uv?: number | null
+  area50_latency_s?: number | null
+  /** Standardized measurement error of the mean amplitude (Luck et al., 2021). */
+  sme_uv?: number | null
   /** Channels × times, for the scalp map. */
   topo_mean?: number[][]
 }
@@ -79,7 +82,16 @@ export interface ProcessResult {
   max_ptp_uv: number[]
   drop: DropSummary
   conditions: ConditionResult[]
-  difference: { label: string; wave: number[]; peak: Peak | null; mean_amplitude_uv: number | null } | null
+  difference: {
+    label: string
+    wave: number[]
+    peak: Peak | null
+    mean_amplitude_uv: number | null
+    area50_latency_s: number | null
+    sme_uv: number | null
+  } | null
+  /** Signed r² (second − first condition) for every channel × time, channels ordered front to back. */
+  discriminability: { label: string; ch_names: string[]; values: number[][]; max_abs: number } | null
 }
 
 export interface RawWindow {

@@ -1,13 +1,32 @@
+import {
+  ActivityIcon,
+  DatabaseIcon,
+  DownloadIcon,
+  GraduationCapIcon,
+  ScissorsIcon,
+  TagsIcon,
+  type LucideIcon,
+} from 'lucide-react'
+
 export const STEPS = [
-  { id: 'load', label: 'Load data', hint: 'Pick a recording' },
-  { id: 'events', label: 'Events', hint: 'Name your conditions' },
-  { id: 'epoching', label: 'Epoching', hint: 'Cut the signal into trials' },
-  { id: 'erp', label: 'ERP', hint: 'Average and compare' },
-  { id: 'learn', label: 'Learn & Quiz', hint: 'Check your understanding' },
-  { id: 'export', label: 'Export', hint: 'Take the pipeline with you' },
+  { id: 'load', label: 'Load data', short: 'Load', hint: 'Pick a recording' },
+  { id: 'events', label: 'Events', short: 'Events', hint: 'Name your conditions' },
+  { id: 'epoching', label: 'Epoching', short: 'Epochs', hint: 'Cut the signal into trials' },
+  { id: 'erp', label: 'ERP', short: 'ERP', hint: 'Average and compare' },
+  { id: 'learn', label: 'Learn & Quiz', short: 'Learn', hint: 'Check your understanding' },
+  { id: 'export', label: 'Export', short: 'Export', hint: 'Take the pipeline with you' },
 ] as const
 
 export type StepId = (typeof STEPS)[number]['id']
+
+export const STEP_ICONS: Record<StepId, LucideIcon> = {
+  load: DatabaseIcon,
+  events: TagsIcon,
+  epoching: ScissorsIcon,
+  erp: ActivityIcon,
+  learn: GraduationCapIcon,
+  export: DownloadIcon,
+}
 
 /** Every step after Load needs a recording first. */
 export function canVisit(step: StepId, hasData: boolean): boolean {

@@ -5,7 +5,7 @@ import type { LoadResponse, ProcessParams } from '@/lib/types'
 
 type DrawerTab = 'explain' | 'tutor'
 export type LoadSource = 'sample' | 'upload'
-export type PlotId = 'raw' | 'erp_image' | 'erp' | 'topomap' | 'events' | 'drop' | 'noise'
+export type PlotId = 'raw' | 'erp_image' | 'erp' | 'topomap' | 'events' | 'drop' | 'noise' | 'r2'
 
 export interface Highlight {
   plot: PlotId
@@ -53,11 +53,54 @@ function fitsDataset(p: ProcessParams | null, dataset: LoadResponse): p is Proce
   )
 }
 
+const QUIZ_KEY = 'erp-lab-quiz'
+
+function loadQuiz(): Record<number, number> {
+  try {
+    return JSON.parse(localStorage.getItem(QUIZ_KEY) ?? '{}')
+  } catch {
+    return {}
+  }
+}
+
+function saveQuiz(answers: Record<number, number>) {
+  try {
+    localStorage.setItem(QUIZ_KEY, JSON.stringify(answers))
+  } catch {
+    /* storage unavailable: progress is just not remembered */
+  }
+}
+
+const PANEL_KEY = 'erp-lab-panel'
+export const PANEL_MIN = 260
+export const PANEL_MAX = 560
+const PANEL_DEFAULT = 340
+
+function loadPanel(): { width: number; collapsed: boolean } {
+  try {
+    const p = JSON.parse(localStorage.getItem(PANEL_KEY) ?? '{}')
+    const width = Number.isFinite(p.width) ? Math.min(PANEL_MAX, Math.max(PANEL_MIN, p.width)) : PANEL_DEFAULT
+    return { width, collapsed: Boolean(p.collapsed) }
+  } catch {
+    return { width: PANEL_DEFAULT, collapsed: false }
+  }
+}
+
+function savePanel(width: number, collapsed: boolean) {
+  try {
+    localStorage.setItem(PANEL_KEY, JSON.stringify({ width, collapsed }))
+  } catch {
+    /* storage unavailable: the panel just resets next visit */
+  }
+}
+
 // The drawer sits beside the content on wide screens and over it on narrow ones, so start it closed there.
 const wideScreen = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches
 
 interface AppState {
   step: StepId
+  /** Steps the student has opened, for the progress meter. */
+  visited: StepId[]
   loadSource: LoadSource
   dataset: LoadResponse | null
   params: ProcessParams | null
@@ -74,8 +117,13 @@ interface AppState {
   rawStart: number
   drawerOpen: boolean
   drawerTab: DrawerTab
+  /** Left controls panel: width in px, and whether it is collapsed to a rail. Remembered per browser. */
+  panelWidth: number
+  panelCollapsed: boolean
   tutorMessages: TutorMessage[]
   socratic: boolean
+  /** Built-in quiz answers by question index, remembered in this browser. */
+  quizAnswers: Record<number, number>
 
   setStep: (step: StepId) => void
   setLoadSource: (source: LoadSource) => void
@@ -92,15 +140,20 @@ interface AppState {
   setTopoTarget: (t: string | null) => void
   setRawStart: (s: number) => void
   toggleDrawer: (open?: boolean) => void
+  setPanelWidth: (width: number) => void
+  togglePanel: (collapsed?: boolean) => void
   setDrawerTab: (tab: DrawerTab) => void
   setSocratic: (on: boolean) => void
   pushTutorMessage: (m: TutorMessage) => void
   updateTutorMessage: (id: string, update: (m: TutorMessage) => TutorMessage) => void
   clearTutor: () => void
+  answerQuiz: (question: number, choice: number) => void
+  resetQuiz: () => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
   step: 'load',
+  visited: ['load'],
   loadSource: 'sample',
   dataset: null,
   params: null,
@@ -114,11 +167,14 @@ export const useAppStore = create<AppState>((set) => ({
   topoTarget: null,
   rawStart: 0,
   drawerOpen: wideScreen(),
+  panelWidth: loadPanel().width,
+  panelCollapsed: loadPanel().collapsed,
   drawerTab: 'explain',
   tutorMessages: [],
   socratic: true,
+  quizAnswers: loadQuiz(),
 
-  setStep: (step) => set({ step }),
+  setStep: (step) => set((s) => ({ step, visited: s.visited.includes(step) ? s.visited : [...s.visited, step] })),
   setLoadSource: (loadSource) => set({ loadSource }),
   setDataset: (dataset) =>
     set((s) => ({
@@ -148,10 +204,32 @@ export const useAppStore = create<AppState>((set) => ({
   setTopoTarget: (topoTarget) => set({ topoTarget }),
   setRawStart: (rawStart) => set({ rawStart: Math.max(0, rawStart) }),
   toggleDrawer: (open) => set((s) => ({ drawerOpen: open ?? !s.drawerOpen })),
+  setPanelWidth: (width) =>
+    set((s) => {
+      const panelWidth = Math.round(Math.min(PANEL_MAX, Math.max(PANEL_MIN, width)))
+      savePanel(panelWidth, s.panelCollapsed)
+      return { panelWidth }
+    }),
+  togglePanel: (collapsed) =>
+    set((s) => {
+      const panelCollapsed = collapsed ?? !s.panelCollapsed
+      savePanel(s.panelWidth, panelCollapsed)
+      return { panelCollapsed }
+    }),
   setDrawerTab: (drawerTab) => set({ drawerTab }),
   setSocratic: (socratic) => set({ socratic }),
   pushTutorMessage: (m) => set((s) => ({ tutorMessages: [...s.tutorMessages, m] })),
   updateTutorMessage: (id, update) =>
     set((s) => ({ tutorMessages: s.tutorMessages.map((m) => (m.id === id ? update(m) : m)) })),
   clearTutor: () => set({ tutorMessages: [] }),
+  answerQuiz: (question, choice) =>
+    set((s) => {
+      const quizAnswers = { ...s.quizAnswers, [question]: choice }
+      saveQuiz(quizAnswers)
+      return { quizAnswers }
+    }),
+  resetQuiz: () => {
+    saveQuiz({})
+    set({ quizAnswers: {} })
+  },
 }))

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { PlotCard } from '@/components/PlotCard'
 import { usePlotTheme } from '@/hooks/usePlotTheme'
 import { useTopo } from '@/hooks/useProcess'
+import { referenceLabel } from '@/lib/describe'
 import { nearestIndex, topoGrid } from '@/lib/erp'
 import type { ProcessResult } from '@/lib/types'
 import { useAppStore } from '@/store/useAppStore'
@@ -116,14 +117,14 @@ export function TopoPlot({ result }: { result: ProcessResult }) {
       id="topomap"
       title={`Scalp map at ${figure ? Math.round(figure.time * 1000) : '–'} ms`}
       subtitle="Click an electrode to plot its ERP. Press play to watch the map change over time."
-      help="Interpolated voltage across the head at the time cursor (nose at the top). A P3 is a positive (red) patch over the back of the head; an ERN is a negative (blue) patch near the top."
+      help="Voltage across the head at the time cursor, seen from above with the nose at the top. Values between electrodes are filled in by thin-plate spline interpolation. A P3 is a positive (red) patch over the back of the head; an ERN is a negative (blue) patch near the top."
       actions={
         <>
           <select
             aria-label="Condition shown on the scalp map"
             value={current}
             onChange={(e) => setTarget(e.target.value)}
-            className="border-input bg-background h-7 rounded-lg border px-2 text-xs"
+            className="border-input bg-card h-9 rounded-lg border px-2.5 text-sm"
           >
             {options.map((o) => (
               <option key={o} value={o}>{o === 'difference' ? `difference (${available[1]?.name} − ${available[0]?.name})` : o}</option>
@@ -137,15 +138,18 @@ export function TopoPlot({ result }: { result: ProcessResult }) {
     >
       {figure ? (
         <PlotlyChart
-          id="topomap" label="Scalp map" data={figure.traces} layout={figure.layout} height={340}
+          id="topomap" label={`Scalp map of ${current} at ${Math.round(figure.time * 1000)} ms`} data={figure.traces} layout={figure.layout} height={440}
           onClick={(e) => {
             const pt = e.points[0]
             if (pt && pt.curveNumber === 1 && typeof pt.text === 'string') setParams({ channel: pt.text })
           }}
         />
       ) : (
-        <div className="bg-muted/40 h-[340px] animate-pulse rounded-lg" />
+        <div className="bg-muted h-[440px] animate-pulse rounded-2xl" />
       )}
+      <p className="text-muted-foreground mt-2 text-sm">
+        Top view, nose up · thin-plate spline interpolation · {referenceLabel(params.reference)} · colour bar in µV · dots are electrodes
+      </p>
     </PlotCard>
   )
 }

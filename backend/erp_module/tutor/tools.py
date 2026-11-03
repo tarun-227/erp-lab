@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from ..schemas import ProcessParams
 
 STEPS = ["load", "events", "epoching", "erp", "learn", "export"]
-PLOTS = ["raw", "erp_image", "erp", "topomap"]
+PLOTS = ["raw", "erp_image", "erp", "topomap", "r2"]
 TUNABLE = {
     "l_freq": {"type": "number", "description": "High-pass cut-off in Hz (0 = off)"},
     "h_freq": {"type": "number", "description": "Low-pass cut-off in Hz (0 = off)"},

@@ -5,10 +5,13 @@ export interface ExplainEntry {
   body: string[]
   tryThis?: string[]
   questions?: string[]
+  /** "You'll learn" list shown under the step title. */
+  objectives?: string[]
 }
 
 export const EXPLAIN: Record<StepId, ExplainEntry> = {
   load: {
+    objectives: ['What an ERP is and why it hides in EEG', 'What a recording and its events contain'],
     title: 'What is an ERP?',
     body: [
       'An event-related potential (ERP) is the small, time-locked voltage change the brain produces in response to an event, such as a tone or a flash. It is usually only a few microvolts, buried in background EEG that is ten times larger.',
@@ -25,6 +28,7 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
     ],
   },
   events: {
+    objectives: ['How event codes map to conditions', 'Why rare conditions give noisier averages'],
     title: 'Events and conditions',
     body: [
       'Each event marks the moment a stimulus appeared or a response was made. Its numeric code tells you which condition it belongs to.',
@@ -38,6 +42,7 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
     ],
   },
   epoching: {
+    objectives: ['How an epoch window and baseline work', 'What filters and the reference change', 'How artefact rejection trades data for cleanliness'],
     title: 'Cutting the signal into epochs',
     body: [
       'An epoch is a fixed window of EEG around one event, for example from 200 ms before to 800 ms after it. The pre-stimulus part is the baseline.',
@@ -57,17 +62,20 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
     ],
   },
   erp: {
+    objectives: ['Why averaging reveals the ERP (1/√N)', 'How to measure peak and mean amplitude', 'Where on the scalp an effect is largest'],
     title: 'Averaging into an ERP',
     body: [
       'Averaging N epochs shrinks random noise by a factor of √N: four times as many trials halves the noise. The noise plot shows this on your own data.',
       'The shaded band around each waveform is a 95% confidence interval. Where the bands of two conditions do not overlap, the difference is unlikely to be noise.',
       'The peak is the most positive (or negative) point inside the window you choose; the mean amplitude in a window is often a more robust measure than the peak.',
       'The scalp map shows where on the head the effect is largest at the time cursor. Click the ERP to move the cursor, or press play.',
+      'The signed r² map tests every channel and moment at once: how well the voltage there tells the two conditions apart, trial by trial. BCIs use it to pick the channels and time windows a classifier should read. SME in the table is the expected error of each mean amplitude: fewer trials, larger SME.',
     ],
     tryThis: [
       'Set "Trials averaged" to 1, then slide it up slowly.',
       'Pin the current ERP, raise the high-pass to 2 Hz, and compare.',
       'Play the scalp map and find when the ERN is strongest, and where on the head.',
+      'On the signed r² map, find the second, later effect after errors (a red band over central-parietal sites around 200–500 ms). Set the component to P300 and measure it.',
     ],
     questions: [
       'Is the ERN in your difference wave larger than the confidence bands of the two conditions?',
@@ -75,6 +83,7 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
     ],
   },
   learn: {
+    objectives: ['Connect each idea to what you saw in the plots', 'Test yourself with the quiz'],
     title: 'Check your understanding',
     body: [
       'Open the concept cards for a short recap of each idea. The "Try this" experiments on the left change the settings for you and take you to the plot that shows the effect.',
@@ -82,6 +91,7 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
     ],
   },
   export: {
+    objectives: ['How to reproduce your analysis outside the app'],
     title: 'Reproducible analysis',
     body: [
       'Exporting the exact parameters as a Python script means anyone can reproduce your ERP from the same data with MNE-Python.',

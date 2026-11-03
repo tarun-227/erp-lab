@@ -40,21 +40,21 @@ export function EventsPanel() {
     <div className="space-y-6">
       <PresetPicker />
       <PanelSection title="Conditions">
-        <p className="text-muted-foreground text-xs leading-relaxed">
+        <p className="text-muted-foreground text-sm leading-relaxed">
           Tick the event codes to analyse and give each a name. Each ticked code becomes one ERP. Up to {MAX_CONDITIONS}.
         </p>
-        <ul className="space-y-2">
+        <ul className="space-y-2.5">
           {codes.map((code) => {
             const idx = included.get(code)
             const cond = idx !== undefined ? params.conditions[idx] : null
             return (
-              <li key={code} className="flex items-center gap-2">
+              <li key={code} className="bg-muted/60 flex items-center gap-2.5 rounded-xl p-2">
                 <input
                   type="checkbox"
                   aria-label={`Include code ${code}`}
                   checked={cond !== null}
                   onChange={() => toggle(code)}
-                  className="accent-primary size-4"
+                  className="accent-primary size-5 shrink-0"
                 />
                 <span
                   className="size-3 shrink-0 rounded-full"
@@ -66,19 +66,25 @@ export function EventsPanel() {
                     value={cond.name}
                     maxLength={60}
                     onChange={(e) => rename(code, e.target.value)}
-                    className={`bg-background h-8 min-w-0 flex-1 rounded-lg border px-2 text-sm ${duplicate.has(cond.name.trim()) ? 'border-destructive' : 'border-input'}`}
+                    aria-invalid={duplicate.has(cond.name.trim()) || undefined}
+                    aria-describedby={duplicate.has(cond.name.trim()) ? 'names-error' : undefined}
+                    className={`bg-card h-9 min-w-0 flex-1 rounded-lg border px-2.5 text-[15px] ${duplicate.has(cond.name.trim()) ? 'border-destructive' : 'border-input'}`}
                   />
                 ) : (
-                  <span className="text-muted-foreground flex-1 truncate text-sm">{dataset.suggested_event_names[String(code)] ?? `Code ${code}`}</span>
+                  <span className="text-muted-foreground flex-1 truncate text-[15px]">{dataset.suggested_event_names[String(code)] ?? `Code ${code}`}</span>
                 )}
-                <span className="text-muted-foreground w-14 text-right font-mono text-xs">
+                <span className="text-muted-foreground w-16 shrink-0 text-right font-mono text-[13px]">
                   {code} · {dataset.summary.event_counts[String(code)]}×
                 </span>
               </li>
             )
           })}
         </ul>
-        {duplicate.size > 0 && <p className="text-destructive text-xs">Condition names must be unique and not empty.</p>}
+        {duplicate.size > 0 && (
+          <p id="names-error" role="alert" className="text-destructive text-sm">
+            Two conditions share a name, or one is empty. Give each a unique name.
+          </p>
+        )}
       </PanelSection>
     </div>
   )
@@ -116,14 +122,14 @@ export function EventsMain() {
         xaxis: { title: { text: 'Time in recording (s)' }, rangeslider: { visible: true, thickness: 0.08 } },
         yaxis: { type: 'category', fixedrange: true },
       }),
-      height: 140 + codes.length * 34,
+      height: 180 + codes.length * 44,
     }
   }, [events, dataset, params.conditions, theme])
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-6">
       <StepHeader
-        step={2}
+        id="events"
         title="Events and conditions"
         text="Each event marks a stimulus or response. Its code says which condition it belongs to. Choose which codes to analyse and name them; the next steps average each condition separately."
       />
@@ -136,18 +142,18 @@ export function EventsMain() {
         {figure ? (
           <PlotlyChart id="events" label="Event timeline" data={figure.traces} layout={figure.layout} height={figure.height} />
         ) : (
-          <div className="bg-muted/40 h-48 animate-pulse rounded-lg" />
+          <div className="bg-muted h-48 animate-pulse rounded-2xl" />
         )}
       </PlotCard>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 @xl:grid-cols-2 @3xl:grid-cols-3">
         {params.conditions.map((c, i) => (
-          <div key={c.code} className="rounded-xl border p-4">
+          <div key={c.code} className="bg-card shadow-soft rounded-2xl border p-4">
             <div className="flex items-center gap-2">
-              <span className="size-3 rounded-full" style={{ background: conditionColor(i, theme.dark) }} />
+              <span aria-hidden className="size-3 rounded-full" style={{ background: conditionColor(i, theme.dark) }} />
               <span className="truncate font-medium">{c.name}</span>
             </div>
-            <div className="mt-2 text-2xl font-semibold tabular-nums">{dataset.summary.event_counts[String(c.code)] ?? 0}</div>
-            <div className="text-muted-foreground text-xs">events with code {c.code}</div>
+            <div className="font-heading mt-1 text-[28px] leading-9 font-extrabold tabular">{dataset.summary.event_counts[String(c.code)] ?? 0}</div>
+            <div className="text-muted-foreground text-sm">events with code {c.code}</div>
           </div>
         ))}
       </div>

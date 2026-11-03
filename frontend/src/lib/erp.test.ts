@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageWithCI, findPeak, noiseCurve, rng, topoGrid, trialSteps } from './erp'
+import { areaLatency, averageWithCI, findPeak, noiseCurve, rng, smeMeanAmplitude, topoGrid, trialSteps } from './erp'
 
 function gaussianTrials(n: number, len: number, sd: number, seed: number): number[][] {
   const rand = rng(seed)
@@ -47,5 +47,22 @@ describe('topoGrid', () => {
   it('multiplies the weights by the channel values and leaves outside points empty', () => {
     const grid = topoGrid([[1, 0], [0.5, 0.5]], [0, 3], 2, [2, 4])
     expect(grid).toEqual([[2, null], [null, 3]])
+  })
+})
+
+describe('SME and area latency', () => {
+  it('SME is the SD of single-trial window means over √N (matches the backend test)', () => {
+    const times = Array.from({ length: 11 }, (_, i) => i / 10)
+    const trials = [1, 3, 5, 7].map((v) => times.map(() => v))
+    const sd = Math.sqrt(((1 - 4) ** 2 + (3 - 4) ** 2 + (5 - 4) ** 2 + (7 - 4) ** 2) / 3)
+    expect(smeMeanAmplitude(trials, times, 0.2, 0.6)).toBeCloseTo(sd / 2, 10)
+    expect(smeMeanAmplitude([trials[0]], times, 0.2, 0.6)).toBeNull()
+  })
+
+  it('50% area latency sits at the centre of a symmetric component', () => {
+    const times = Array.from({ length: 1001 }, (_, i) => i / 1000)
+    const wave = times.map((t) => -Math.exp(-((t - 0.4) ** 2) / 0.002))
+    expect(Math.abs(areaLatency(times, wave, 0.2, 0.6, 'negative')! - 0.4)).toBeLessThan(0.002)
+    expect(areaLatency(times, wave, 0.2, 0.6, 'positive')).toBeNull()
   })
 })

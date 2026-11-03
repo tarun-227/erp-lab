@@ -41,21 +41,39 @@ def process(pre: mne.io.BaseRaw, events: np.ndarray, p: dict) -> dict:
                 mean=_r(mean), ci=_r(ci),
                 peak=erp.find_peak(times, mean, window, p["polarity"]),
                 mean_amplitude_uv=erp.mean_amplitude(times, mean, window),
+                area50_latency_s=erp.area_latency(times, mean, window, p["polarity"]),
+                sme_uv=erp.sme_mean_amplitude(trials[mask], times, window),
                 topo_mean=_r(means_all[name]),
             )
         conditions.append(entry)
 
     difference = None
+    discriminability = None
     names = [c["name"] for c in conditions if c["name"] in means_all]
     if len(event_id) == 2 and len(names) == 2:
         a, b = names
         wave = means_all[b][ch_names.index(channel)] - means_all[a][ch_names.index(channel)]
+        smes = [c.get("sme_uv") for c in conditions]
         difference = {
             "label": f"{b} − {a}",
             "wave": _r(wave),
             "peak": erp.find_peak(times, wave, window, p["polarity"]),
             "mean_amplitude_uv": erp.mean_amplitude(times, wave, window),
+            "area50_latency_s": erp.area_latency(times, wave, window, p["polarity"]),
+            # Independent conditions: the errors add in quadrature.
+            "sme_uv": float(np.hypot(*smes)) if all(v is not None for v in smes) else None,
         }
+        mask_a = (labels == a) & result.kept
+        mask_b = (labels == b) & result.kept
+        if mask_a.sum() >= 2 and mask_b.sum() >= 2:
+            r2 = erp.signed_r2(data_uv[mask_a], data_uv[mask_b])
+            order = _front_to_back(pre, ch_names)
+            discriminability = {
+                "label": f"{b} − {a}",
+                "ch_names": [ch_names[i] for i in order],
+                "values": _r(r2[order], 4),
+                "max_abs": float(np.abs(r2).max()),
+            }
 
     first = pre.first_samp
     sfreq = pre.info["sfreq"]
@@ -72,7 +90,16 @@ def process(pre: mne.io.BaseRaw, events: np.ndarray, p: dict) -> dict:
         "drop": result.drop_summary(),
         "conditions": conditions,
         "difference": difference,
+        "discriminability": discriminability,
     }
+
+
+def _front_to_back(pre: mne.io.BaseRaw, ch_names: list[str]) -> list[int]:
+    """Channel indices sorted from the front of the head to the back (then left to right), for readable maps."""
+    locs = [pre.info["chs"][pre.ch_names.index(ch)]["loc"][:3] for ch in ch_names]
+    if not all(np.isfinite(loc).all() and np.abs(loc).sum() > 0 for loc in locs):
+        return list(range(len(ch_names)))
+    return sorted(range(len(ch_names)), key=lambda i: (-round(float(locs[i][1]), 3), float(locs[i][0])))
 
 
 def raw_window(pre: mne.io.BaseRaw, start_s: float, duration_s: float, max_points: int = 2000) -> dict:

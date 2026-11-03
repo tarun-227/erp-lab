@@ -114,7 +114,7 @@ export function ErpImagePlot({ result }: { result: ProcessResult }) {
         </Button>
       }
     >
-      <PlotlyChart id="erp_image" label="ERP image of every trial" data={figure.traces} layout={figure.layout} height={380} onClick={onClick} />
+      <PlotlyChart id="erp_image" label={`ERP image at ${result.channel}: ${result.trials.length} epochs, ${result.drop.rejected} rejected`} data={figure.traces} layout={figure.layout} height={480} onClick={onClick} />
     </PlotCard>
   )
 }

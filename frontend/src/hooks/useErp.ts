@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { averageWithCI, findPeak, meanInWindow } from '@/lib/erp'
+import { areaLatency, averageWithCI, findPeak, meanInWindow, smeMeanAmplitude } from '@/lib/erp'
 import type { Peak, ProcessResult } from '@/lib/types'
 import { useAppStore } from '@/store/useAppStore'
 
@@ -11,6 +11,8 @@ export interface Wave {
   ci: number[]
   peak: Peak | null
   meanAmp: number | null
+  area50: number | null
+  sme: number | null
 }
 
 /**
@@ -35,6 +37,8 @@ export function useErpWaves(result: ProcessResult | undefined) {
         ci,
         peak: used.length ? findPeak(result.times, mean, params.peak_start, params.peak_end, params.polarity) : null,
         meanAmp: used.length ? meanInWindow(result.times, mean, params.peak_start, params.peak_end) : null,
+        area50: used.length ? areaLatency(result.times, mean, params.peak_start, params.peak_end, params.polarity) : null,
+        sme: smeMeanAmplitude(used, result.times, params.peak_start, params.peak_end),
       }
     })
     let difference: Wave | null = null
@@ -49,6 +53,9 @@ export function useErpWaves(result: ProcessResult | undefined) {
         ci: mean.map(() => 0),
         peak: findPeak(result.times, mean, params.peak_start, params.peak_end, params.polarity),
         meanAmp: meanInWindow(result.times, mean, params.peak_start, params.peak_end),
+        area50: areaLatency(result.times, mean, params.peak_start, params.peak_end, params.polarity),
+        // Independent conditions: the errors add in quadrature.
+        sme: a.sme !== null && b.sme !== null ? Math.hypot(a.sme, b.sme) : null,
       }
     }
     const maxN = Math.max(0, ...waves.map((w) => w.nAvailable))

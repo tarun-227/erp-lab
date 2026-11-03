@@ -3,7 +3,6 @@ import { CopyIcon, DownloadIcon, FileCodeIcon, FileJsonIcon, Link2Icon, TableIco
 import { type ReactNode, useRef } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { fmt } from '@/components/ParamControl'
 import { useErpWaves } from '@/hooks/useErp'
 import { useDebounced, useProcess } from '@/hooks/useProcess'
 import { api } from '@/lib/api'
@@ -28,42 +27,15 @@ function highlight(code: string): ReactNode[] {
   return out
 }
 
-export function ExportPanel() {
-  const p = useAppStore((s) => s.params!)
-  const rows: [string, string][] = [
-    ['Conditions', p.conditions.map((c) => `${c.name} (${c.code})`).join(', ')],
-    ['Filter', `${fmt.hz(p.l_freq)} – ${fmt.hz(p.h_freq)}`],
-    ['Reference', p.reference],
-    ['Epoch', `${fmt.ms(p.tmin)} → ${fmt.ms(p.tmax)}`],
-    ['Baseline', p.baseline ? `${fmt.ms(p.baseline_start)} → ${fmt.ms(p.baseline_end)}` : 'off'],
-    ['Rejection', fmt.uv(p.reject_uv)],
-    ['Channel', p.channel],
-    ['Peak window', `${fmt.ms(p.peak_start)} → ${fmt.ms(p.peak_end)} (${p.polarity})`],
-  ]
-  return (
-    <div className="space-y-3">
-      <h2 className="text-sm font-semibold">Current parameters</h2>
-      <dl className="space-y-2 text-sm">
-        {rows.map(([k, v]) => (
-          <div key={k}>
-            <dt className="text-muted-foreground text-xs">{k}</dt>
-            <dd className="font-mono text-xs break-words">{v}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  )
-}
-
 function ExportCard({ icon: Icon, title, text, children }: { icon: typeof FileCodeIcon; title: string; text: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col rounded-xl border p-4">
-      <div className="flex items-center gap-2">
-        <span className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-lg"><Icon className="size-4" /></span>
-        <h3 className="text-sm font-semibold">{title}</h3>
+    <div className="bg-card shadow-soft flex flex-col rounded-[20px] border p-5">
+      <div className="flex items-center gap-3">
+        <span className="bg-primary-soft text-primary flex size-11 items-center justify-center rounded-2xl"><Icon className="size-5" aria-hidden /></span>
+        <h2 className="text-lg font-extrabold">{title}</h2>
       </div>
-      <p className="text-muted-foreground mt-2 flex-1 text-xs leading-relaxed">{text}</p>
-      <div className="mt-3 flex flex-wrap gap-2">{children}</div>
+      <p className="text-muted-foreground mt-3 flex-1 text-[15px] leading-snug">{text}</p>
+      <div className="mt-4 flex flex-wrap gap-2">{children}</div>
     </div>
   )
 }
@@ -109,7 +81,7 @@ export function ExportMain() {
       const missing = candidate.conditions.filter((c) => !(String(c.code) in dataset.summary.event_counts))
       if (missing.length) throw new Error(`This recording has no events with code ${missing.map((c) => c.code).join(', ')}.`)
       replaceParams(candidate)
-      toast.success('Parameters restored', { description: 'Undo is available in the Presets panel.' })
+      toast.success('Parameters restored', { description: 'Undo is in the Quick start panel on the Events step.' })
     } catch (err) {
       toast.error('Could not load parameters', { description: (err as Error).message })
     }
@@ -118,12 +90,12 @@ export function ExportMain() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <StepHeader
-        step={6}
+        id="export"
         title="Take the pipeline with you"
         text="Everything you set up here can be reproduced outside the app: a Python script with your exact parameters, the recording it runs on, and the results."
       />
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 @xl:grid-cols-2 @5xl:grid-cols-4">
         <ExportCard icon={WavesIcon} title="Recording" text="The EEG and events this script runs on, as an MNE .fif file.">
           <Button size="sm" variant="outline" nativeButton={false} render={<a href={api.recordingUrl(dataset.session_id)} download="recording_raw.fif" />}>
             <DownloadIcon /> recording_raw.fif
@@ -150,12 +122,12 @@ export function ExportMain() {
         </ExportCard>
       </div>
 
-      <section className="bg-card rounded-xl border">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-          <div className="flex items-center gap-2">
-            <FileCodeIcon className="text-primary size-4" />
-            <h3 className="text-sm font-semibold">erp_pipeline.py</h3>
-            <span className="text-muted-foreground text-xs">Run with: python erp_pipeline.py recording_raw.fif</span>
+      <section className="bg-card shadow-soft overflow-hidden rounded-[20px] border" aria-labelledby="script-title">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <FileCodeIcon className="text-primary size-5" aria-hidden />
+            <h2 id="script-title" className="font-mono text-base font-medium">erp_pipeline.py</h2>
+            <span className="text-muted-foreground text-sm">Run with <code className="bg-muted rounded px-1.5 py-0.5 font-mono text-[13px]">python erp_pipeline.py recording_raw.fif</code></span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" disabled={!exported} onClick={() => exported && copy(exported.script, 'Script')}>
@@ -166,7 +138,7 @@ export function ExportMain() {
             </Button>
           </div>
         </header>
-        <pre className="max-h-[560px] overflow-auto p-4 font-mono text-xs leading-relaxed">
+        <pre tabIndex={0} role="region" aria-label="Generated Python script" className="bg-muted/40 max-h-[560px] overflow-auto p-5 font-mono text-[13px] leading-relaxed">
           {exported ? highlight(exported.script) : error ? (error as Error).message : paramsProblem(debounced) ?? 'Generating…'}
         </pre>
       </section>

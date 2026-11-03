@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Loader2Icon } from 'lucide-react'
 import type { PlotTheme } from '@/lib/colors'
 import type { PlotId } from '@/store/useAppStore'
+import { useExpandedHeight } from './expand'
 
 type PlotlyModule = typeof import('plotly.js-dist-min').default
 type PlotElement = HTMLDivElement & { on?: (event: string, cb: (e: never) => void) => void }
@@ -26,9 +27,9 @@ export function baseLayout(theme: PlotTheme, extra: Partial<P.Layout> = {}): Par
   return {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: 'Geist Variable, ui-sans-serif, system-ui, sans-serif', size: 12, color: theme.text },
+    font: { family: 'DM Sans Variable, ui-sans-serif, system-ui, sans-serif', size: 13, color: theme.text },
     margin: { l: 56, r: 16, t: 12, b: 44 },
-    hoverlabel: { font: { family: 'Geist Variable, ui-sans-serif, sans-serif' } },
+    hoverlabel: { font: { family: 'DM Sans Variable, ui-sans-serif, sans-serif', size: 13 }, bordercolor: theme.grid },
     legend: { orientation: 'h', x: 0, y: 1.02, yanchor: 'bottom', font: { color: theme.text } },
     ...extra,
     xaxis: { ...axis, ...(extra.xaxis ?? {}) },
@@ -46,7 +47,9 @@ interface PlotlyChartProps {
   label: string
 }
 
-export function PlotlyChart({ id, data, layout, height, onClick, onHover, label }: PlotlyChartProps) {
+export function PlotlyChart({ id, data, layout, height: baseHeight, onClick, onHover, label }: PlotlyChartProps) {
+  const expanded = useExpandedHeight()
+  const height = expanded ?? baseHeight
   const ref = useRef<PlotElement>(null)
   const handlers = useRef({ onClick, onHover })
   const [ready, setReady] = useState(false)
@@ -75,6 +78,28 @@ export function PlotlyChart({ id, data, layout, height, onClick, onHover, label 
     }
   }, [data, layout, height, id, ready])
 
+  // Redraw at the new width whenever the container changes size (panel dragged, drawer toggled, plot expanded).
+  // Only a real width change triggers a redraw, so a redraw can never feed back into another one.
+  useEffect(() => {
+    const el = ref.current
+    const box = el?.parentElement
+    if (!el || !box || !ready) return
+    let frame = 0
+    let lastWidth = Math.round(box.getBoundingClientRect().width)
+    const observer = new ResizeObserver(([entry]) => {
+      const width = Math.round(entry.contentRect.width)
+      if (Math.abs(width - lastWidth) < 2) return
+      lastWidth = width
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => loadPlotly().then((Plotly) => Plotly.Plots.resize(el)))
+    })
+    observer.observe(box)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [ready])
+
   useEffect(() => {
     const el = ref.current
     return () => {
@@ -84,7 +109,7 @@ export function PlotlyChart({ id, data, layout, height, onClick, onHover, label 
   }, [id])
 
   return (
-    <div className="relative" style={{ height }} role="img" aria-label={label}>
+    <div className="relative" style={{ height }} role="figure" aria-label={label}>
       {!ready && (
         <div className="text-muted-foreground absolute inset-0 flex items-center justify-center">
           <Loader2Icon className="size-5 animate-spin" />

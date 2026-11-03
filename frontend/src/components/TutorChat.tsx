@@ -37,10 +37,10 @@ function MessageView({ m }: { m: TutorMessage }) {
   const setStep = useAppStore((s) => s.setStep)
   if (m.role === 'user') {
     return (
-      <div className="bg-primary text-primary-foreground ml-8 rounded-2xl rounded-br-sm px-3 py-2 text-sm">
+      <div className="bg-primary text-primary-foreground ml-10 rounded-2xl rounded-br-md px-4 py-2.5 text-[15px] leading-snug">
         {m.plot && (
-          <div className="mb-1 flex items-center gap-1 text-xs opacity-80">
-            <ImageIcon className="size-3" /> {m.plot} plot attached
+          <div className="mb-1 flex items-center gap-1.5 text-[13px] opacity-90">
+            <ImageIcon className="size-3.5" aria-hidden /> {m.plot} plot attached
           </div>
         )}
         {m.content}
@@ -48,30 +48,30 @@ function MessageView({ m }: { m: TutorMessage }) {
     )
   }
   return (
-    <div className="mr-4 space-y-2">
+    <div className="mr-6 space-y-2">
       {(m.content || m.streaming) && (
-        <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap">
+        <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap">
           {m.content}
           {m.streaming && <span className="bg-foreground/60 ml-0.5 inline-block h-3.5 w-1.5 animate-pulse align-middle" />}
         </div>
       )}
       {m.error && (
-        <div className={cn('rounded-lg px-3 py-2 text-sm', m.error.kind === 'busy' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-destructive/10 text-destructive')}>
+        <div role="alert" className={cn('rounded-xl px-3 py-2.5 text-sm', m.error.kind === 'busy' ? 'bg-warning-soft text-warning' : 'bg-destructive-soft text-destructive')}>
           {m.error.message}
         </div>
       )}
       {m.actions?.map((a) => (
-        <div key={a.id} className="border-primary/30 bg-primary/5 rounded-xl border p-3">
-          <div className="text-primary flex items-center gap-1.5 text-xs font-semibold">
-            <SparklesIcon className="size-3.5" /> Suggested experiment
+        <div key={a.id} className="border-primary/25 bg-primary-soft shadow-soft rounded-2xl border p-4">
+          <div className="text-primary flex items-center gap-1.5 text-sm font-semibold">
+            <SparklesIcon className="size-4" aria-hidden /> Suggested experiment
           </div>
-          <div className="mt-1 text-sm font-medium">{a.title}</div>
-          <div className="text-muted-foreground font-mono text-xs">{changeLabel(a.changes)}</div>
-          {a.watch && <p className="mt-1 text-xs leading-relaxed">Watch: {a.watch}</p>}
-          <div className="mt-2 flex gap-2">
+          <div className="font-heading mt-1 text-base font-extrabold">{a.title}</div>
+          <div className="text-muted-foreground font-mono text-[13px]">{changeLabel(a.changes)}</div>
+          {a.watch && <p className="mt-1.5 text-sm leading-snug"><b>Watch:</b> {a.watch}</p>}
+          <div className="mt-3 flex items-center gap-2">
             {a.state === 'applied' ? (
               <>
-                <span className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400"><CheckIcon className="size-3.5" /> Applied</span>
+                <span className="text-success flex items-center gap-1 text-sm font-medium"><CheckIcon className="size-4" aria-hidden /> Applied</span>
                 <Button size="xs" variant="outline" onClick={() => undoAction(m.id, a)}><Undo2Icon /> Undo</Button>
               </>
             ) : (
@@ -117,11 +117,11 @@ export function TutorChat() {
   if (!status?.enabled) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-        <span className="bg-muted mb-3 flex size-10 items-center justify-center rounded-full">
-          <WifiOffIcon className="text-muted-foreground size-5" />
+        <span className="bg-primary-soft text-primary mb-4 flex size-14 items-center justify-center rounded-2xl">
+          <WifiOffIcon className="size-6" aria-hidden />
         </span>
-        <p className="text-sm font-medium">Tutor offline</p>
-        <p className="text-muted-foreground mt-1 max-w-64 text-sm">
+        <p className="font-heading text-lg font-extrabold">Tutor offline</p>
+        <p className="text-muted-foreground mt-1.5 max-w-72 text-[15px] leading-snug">
           Add a free Groq key (and optionally a Gemini key for plot images) to <code>.env</code>, then restart the app.
           Everything else works without it.
         </p>
@@ -131,13 +131,13 @@ export function TutorChat() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-2 border-b px-4 py-2">
-        <label className="flex items-center gap-2 text-xs">
+      <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
+        <label className="flex items-center gap-2 text-sm">
           <Switch checked={socratic} onCheckedChange={(c) => setSocratic(Boolean(c))} aria-label="Socratic mode" />
           {socratic ? 'Socratic: hints first' : 'Direct answers'}
         </label>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-[11px]">{status.text_provider}{status.vision_provider ? ` + ${status.vision_provider}` : ''}</span>
+          <span className="text-muted-foreground text-xs">{status.text_provider}{status.vision_provider ? ` + ${status.vision_provider}` : ''}</span>
           <Button variant="ghost" size="icon-xs" aria-label="Clear conversation" disabled={!messages.length || busy} onClick={clear}>
             <Trash2Icon />
           </Button>
@@ -146,12 +146,12 @@ export function TutorChat() {
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
         {messages.length === 0 && (
           <div className="space-y-3">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-[15px] leading-snug">
               Ask about your own results. The tutor sees your current parameters and numbers (never the raw EEG) and can suggest experiments for you to apply.
             </p>
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               {SUGGESTIONS[step].map((q) => (
-                <button key={q} type="button" onClick={() => void send(q)} className="hover:bg-muted rounded-lg border px-3 py-2 text-left text-sm">
+                <button key={q} type="button" onClick={() => void send(q)} className="bg-card hover:border-primary/40 hover:bg-primary-soft rounded-xl border px-3.5 py-2.5 text-left text-[15px] transition-colors">
                   {q}
                 </button>
               ))}
@@ -172,13 +172,13 @@ export function TutorChat() {
             if (e.key === 'Enter' && !e.shiftKey) submit(e)
           }}
           placeholder="Ask about your ERP…"
-          className="border-input bg-background min-h-0 flex-1 resize-none rounded-lg border p-2 text-sm"
+          className="border-input bg-card min-h-0 flex-1 resize-none rounded-xl border px-3 py-2 text-[15px]"
         />
         <Button type="submit" size="icon" aria-label="Send" disabled={!text.trim() || busy}>
           {busy ? <Loader2Icon className="animate-spin" /> : <SendHorizonalIcon />}
         </Button>
       </form>
-      <p className="text-muted-foreground px-3 pb-2 text-[11px]">AI answers can be wrong. Check them against the plots.</p>
+      <p className="text-muted-foreground px-3 pb-3 text-xs">AI answers can be wrong. Check them against the plots.</p>
     </div>
   )
 }

@@ -1,7 +1,6 @@
-import { ArrowRightIcon } from 'lucide-react'
+import { ArrowRightIcon, CheckCircle2Icon, ScissorsIcon, TagsIcon, XCircleIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Nudge, PanelSection, ParamControl, RangeControl, SelectControl, SwitchControl, fmt } from '@/components/ParamControl'
-import { PresetPicker } from '@/components/PresetPicker'
 import { ProcessStatus } from '@/components/ProcessStatus'
 import { useKeptToast, useProcess } from '@/hooks/useProcess'
 import type { ProcessParams } from '@/lib/types'
@@ -47,7 +46,6 @@ export function EpochingPanel() {
 
   return (
     <div className="space-y-6">
-      <PresetPicker />
 
       <PanelSection title="Epoch">
         <RangeControl
@@ -121,27 +119,28 @@ export function EpochingMain() {
   useKeptToast(data?.drop.kept)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-6">
       <StepHeader
-        step={3}
+        id="epoching"
         title="Cut the signal into epochs"
         text="An epoch is a short window of EEG around one event. Set the window, filter and rejection threshold on the left; the plots update as you move the sliders."
         aside={<ProcessStatus isFetching={isFetching} error={error} />}
       />
       {data ? (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Epochs kept" value={`${data.drop.kept} / ${data.drop.total_events}`} sub="go into the averages" />
-            <Stat label="Rejected" value={data.drop.rejected} tone={data.drop.rejected ? 'bad' : 'muted'} sub="above the threshold" />
-            <Stat label="Too close to edge" value={data.drop.edge} tone="muted" sub="window runs off the recording" />
+          <div className="grid grid-cols-2 gap-4 @3xl:grid-cols-4">
+            <Stat icon={CheckCircle2Icon} label="Epochs kept" value={`${data.drop.kept} / ${data.drop.total_events}`} sub="go into the averages" tone="good" />
+            <Stat icon={XCircleIcon} label="Rejected" value={data.drop.rejected} tone={data.drop.rejected ? 'bad' : 'muted'} sub="swing above the threshold" />
+            <Stat icon={ScissorsIcon} label="Too close to edge" value={data.drop.edge} tone="muted" sub="window runs off the recording" />
             <Stat
-              label="Per condition"
-              value={<span className="text-base">{data.conditions.map((c) => `${c.n_kept}`).join(' / ')}</span>}
+              icon={TagsIcon}
+              label="Kept per condition"
+              value={<span className="text-xl">{data.conditions.map((c) => `${c.n_kept}`).join(' / ')}</span>}
               sub={data.conditions.map((c) => c.name).join(' / ')}
             />
           </div>
           <RawPlot result={data} />
-          <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
+          <div className="grid gap-6 @4xl:grid-cols-[3fr_2fr]">
             <ErpImagePlot result={data} />
             <DropLogChart result={data} />
           </div>
@@ -152,7 +151,7 @@ export function EpochingMain() {
           </div>
         </>
       ) : (
-        !error && <div className="bg-muted/40 h-96 animate-pulse rounded-xl" />
+        !error && <div role="status" className="bg-muted h-96 animate-pulse rounded-[20px]"><span className="sr-only">Loading epochs…</span></div>
       )}
     </div>
   )

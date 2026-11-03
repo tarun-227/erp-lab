@@ -17,3 +17,23 @@ def test_oldest_session_is_evicted_and_access_refreshes():
     assert store.get(a).source == "a"
     with pytest.raises(KeyError):
         store.get(b)
+
+
+def test_sessions_on_the_same_recording_share_preprocessed_copies(sample):
+    from erp_module.sessions import preprocess_cache
+
+    raw, events, _ = sample
+    a = Session(raw=raw, events=events, source="sample", raw_key="shared-test")
+    b = Session(raw=raw, events=events, source="sample", raw_key="shared-test")
+    assert a.preprocessed(0.1, 30.0, "average") is b.preprocessed(0.1, 30.0, "average")
+    preprocess_cache.drop("shared-test")
+
+
+def test_preprocess_cache_is_bounded(sample):
+    from erp_module.sessions import PreprocessCache
+
+    raw, _, _ = sample
+    cache = PreprocessCache(max_items=2)
+    for h in (20.0, 25.0, 30.0):
+        cache.get("k", raw.copy().crop(0, 20), None, h, "average")
+    assert len(cache._items) == 2

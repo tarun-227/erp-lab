@@ -8,7 +8,8 @@ processing choice changes the result. An optional AI tutor explains the student'
 - **Data**: a bundled ERP CORE flanker recording (stimulus- and response-locked events, with an ERN after
   errors), or your own `.fif` / `.edf` / `.bdf` / `.set` / BrainVision file
 - **Linked, live plots**: raw EEG with epoch windows ↔ ERP image of every trial; ERP waveforms ↔ animated
-  scalp map; drop log; noise vs 1/√N
+  scalp map ↔ signed r² channel × time map; drop log; noise vs 1/√N
+- **Measurements**: mean amplitude with its SME (data quality), peak latency and amplitude, 50% area latency
 - **Parameters**: epoch window, baseline, high-pass, low-pass, reference, rejection threshold, channel,
   peak window and polarity, trials averaged, plus one-click presets with undo
 - **Explain panel** for every step, concept cards, "Try this" experiments and a quiz
@@ -59,14 +60,17 @@ cd frontend && npm test
 cd frontend && npx playwright test
 ```
 
-32 backend tests (pytest), 12 frontend unit tests (Vitest) and an end-to-end run through all six steps
-(Playwright). See the developer guide for details.
+38 backend tests (pytest), 15 frontend unit tests (Vitest), and Playwright end-to-end tests: a run through
+all six steps plus an automated accessibility check (axe, WCAG 2.2 AA) of every step in light and dark
+themes. See the developer guide for details.
 
 ## Documentation
 
 - [User guide](docs/USER_GUIDE.md): what every step, parameter and plot does
 - [Developer guide](docs/DEVELOPER_GUIDE.md): architecture, API, tests, how to extend and how to merge
   into the shared course app
+- [Design system](design-system/erp-lab/MASTER.md): colours, type, components and accessibility rules
+  behind the interface
 - [Demo script](docs/DEMO.md): the 10-minute demo and likely viva questions
 - [Contribution statement](CONTRIBUTION.md)
 

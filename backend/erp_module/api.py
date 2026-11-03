@@ -64,7 +64,7 @@ def load_sample() -> LoadResponse:
     if not SAMPLE_FILE.exists():
         raise HTTPException(404, "The bundled sample is missing. Run: python scripts/make_sample_data.py")
     raw, events, names = _sample()
-    session = Session(raw=raw, events=events, source="sample")
+    session = Session(raw=raw, events=events, source="sample", raw_key="sample")
     sid = store.create(session)
     return _load_response(sid, session, names, SAMPLE_DESCRIPTION)
 

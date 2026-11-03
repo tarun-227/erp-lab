@@ -26,7 +26,7 @@ one multiply by the interpolation matrix from `core/topo.py`.
 | `core/topo.py` | 2D electrode projection and thin-plate-spline interpolation matrix |
 | `core/pipeline.py` | Runs epochs → ERPs for one parameter set and packages the JSON for the frontend |
 | `core/codegen.py` | Turns parameters into a standalone MNE script |
-| `sessions.py` | In-memory sessions; caches up to three filtered copies of each recording |
+| `sessions.py` | In-memory sessions, plus one shared, bounded cache of filtered copies (4 at most, ~55 MB each for the sample); sessions on the same recording share copies |
 | `schemas.py` | Pydantic models; `ProcessParams` validates windows, filters and condition names |
 | `api.py` | Routes under `/api`; serves `frontend/dist` at `/` |
 | `tutor/` | Provider routing, context builder, prompts, tool definitions and the chat/quiz/grade routes |
@@ -140,6 +140,17 @@ Two routes, depending on how the shared app is built. Both are tested.
 
 The processing core (`backend/erp_module/core/`) has no web dependencies, so other modules can import it
 directly (for example `from erp_module.core.processing import make_epochs`).
+
+## Design system
+
+The interface follows `design-system/erp-lab/MASTER.md`: a friendly learning-app style (soft, rounded
+"clay" controls; flat, precise plots), indigo primary with a warm accent, Nunito headings over DM Sans
+body text, light theme first with a matching dark theme. Colour tokens live in `frontend/src/index.css`
+(and as hex for Plotly in `frontend/src/lib/colors.ts`); use the tokens, never raw hex, in components.
+It was derived with the ui-ux-pro-max skill's data (see the file's header).
+
+`frontend/e2e/a11y.spec.ts` runs axe on every step in both themes and fails on any serious or critical
+WCAG 2.2 AA issue, so keep it green when changing the UI.
 
 ## Conventions
 

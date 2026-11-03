@@ -1,7 +1,7 @@
 import { ArrowRightIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Nudge, PanelSection, ParamControl, RangeControl, fmt } from '@/components/ParamControl'
-import { PresetPicker } from '@/components/PresetPicker'
 import { ProcessStatus } from '@/components/ProcessStatus'
 import { useErpWaves, type Wave } from '@/hooks/useErp'
 import { useConditionColors } from '@/hooks/usePlotTheme'
@@ -9,6 +9,7 @@ import { useProcess } from '@/hooks/useProcess'
 import { cn } from '@/lib/utils'
 import { ErpPlot } from '@/plots/ErpPlot'
 import { NoisePlot } from '@/plots/NoisePlot'
+import { R2Plot } from '@/plots/R2Plot'
 import { TopoPlot } from '@/plots/TopoPlot'
 import { useAppStore } from '@/store/useAppStore'
 import { ChannelSelect } from './EpochingStep'
@@ -17,8 +18,8 @@ import { StepHeader } from './StepHeader'
 const COMPONENTS = [
   { label: 'N1', start: 0.07, end: 0.15, polarity: 'negative' as const, hint: 'early sensory response, ~100 ms' },
   { label: 'P300', start: 0.25, end: 0.5, polarity: 'positive' as const, hint: 'rare, task-relevant stimuli' },
-  { label: 'N170', start: 0.13, end: 0.2, polarity: 'negative' as const, hint: 'faces, occipito-temporal' },
   { label: 'ERN', start: 0, end: 0.1, polarity: 'negative' as const, hint: 'after an error response' },
+  { label: 'Pe', start: 0.2, end: 0.5, polarity: 'positive' as const, hint: 'error positivity, central-parietal, after the ERN' },
 ]
 
 export function ErpPanel() {
@@ -32,7 +33,6 @@ export function ErpPanel() {
 
   return (
     <div className="space-y-6">
-      <PresetPicker />
       <PanelSection title="Component">
         <div className="flex flex-wrap gap-1.5">
           {COMPONENTS.map((c) => (
@@ -82,40 +82,60 @@ export function ErpPanel() {
   )
 }
 
+const COLUMNS: { label: string; help: string }[] = [
+  { label: 'Trials', help: 'Kept epochs averaged for this condition.' },
+  { label: 'Mean amplitude', help: 'Average voltage in the window. The most robust amplitude measure (ERP CORE), because it does not hunt for noise peaks.' },
+  { label: 'SME', help: 'Standardized measurement error of the mean amplitude: the SD of single-trial window means divided by √N (Luck et al., 2021). The expected error of this score; fewer trials or more noise make it larger.' },
+  { label: 'Peak latency', help: 'Time of the most positive (or negative) point in the window.' },
+  { label: 'Peak amplitude', help: 'Voltage at that peak. Biased away from zero by noise, so prefer the mean amplitude for comparisons.' },
+  { label: '50% area latency', help: 'Time that splits the component area in the window in half. ERP CORE found it far more stable than peak latency.' },
+]
+
 function PeakTable({ waves, difference }: { waves: Wave[]; difference: Wave | null }) {
   const colorOf = useConditionColors()
   const p = useAppStore((s) => s.params!)
   const rows = difference ? [...waves, difference] : waves
+  const uv = (v: number | null | undefined) => (v === null || v === undefined ? '–' : `${v.toFixed(2)} µV`)
   return (
-    <div className="bg-card overflow-x-auto rounded-xl border">
+    <div className="bg-card shadow-soft overflow-x-auto rounded-[20px] border">
       <table className="w-full text-sm">
-        <caption className="text-muted-foreground px-4 pt-3 text-left text-xs">
-          {p.polarity === 'positive' ? 'Most positive' : 'Most negative'} point between {fmt.ms(p.peak_start)} and {fmt.ms(p.peak_end)}, and the mean voltage in that window.
+        <caption className="px-5 pt-4 text-left">
+          <span className="font-heading block text-lg font-extrabold">Measurements</span>
+          <span className="text-muted-foreground text-sm">
+            In the window {fmt.ms(p.peak_start)} to {fmt.ms(p.peak_end)} at {p.channel}, looking for a {p.polarity} component. Hover a
+            column name for what it means.
+          </span>
         </caption>
-        <thead className="text-muted-foreground text-xs">
+        <thead className="text-muted-foreground text-sm">
           <tr className="border-b">
-            <th className="px-4 py-2 text-left font-medium">Condition</th>
-            <th className="px-4 py-2 text-right font-medium">Trials</th>
-            <th className="px-4 py-2 text-right font-medium">Peak latency</th>
-            <th className="px-4 py-2 text-right font-medium">Peak amplitude</th>
-            <th className="px-4 py-2 text-right font-medium">Mean amplitude</th>
+            <th scope="col" className="px-5 py-2.5 text-left font-medium">Condition</th>
+            {COLUMNS.map((c) => (
+              <th key={c.label} scope="col" className="px-5 py-2.5 text-right font-medium">
+                <Tooltip>
+                  <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-4">{c.label}</TooltipTrigger>
+                  <TooltipContent className="max-w-72">{c.help}</TooltipContent>
+                </Tooltip>
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody className="tabular-nums">
+        <tbody className="tabular text-[15px]">
           {rows.map((w) => {
             const isDiff = w === difference
             return (
               <tr key={w.name} className={cn('border-b last:border-0', isDiff && 'bg-muted/40')}>
-                <td className="px-4 py-2">
+                <th scope="row" className="px-5 py-3 text-left font-normal">
                   <span className="inline-flex items-center gap-2">
-                    <span className="size-2.5 rounded-full" style={{ background: isDiff ? 'var(--foreground)' : colorOf(w.name) }} />
+                    <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ background: isDiff ? 'var(--foreground)' : colorOf(w.name) }} />
                     {isDiff ? `Difference: ${w.name}` : w.name}
                   </span>
-                </td>
-                <td className="px-4 py-2 text-right">{isDiff ? '–' : w.n}</td>
-                <td className="px-4 py-2 text-right">{w.peak ? fmt.ms(w.peak.latency_s) : '–'}</td>
-                <td className="px-4 py-2 text-right">{w.peak ? `${w.peak.amplitude_uv.toFixed(2)} µV` : '–'}</td>
-                <td className="px-4 py-2 text-right">{w.meanAmp !== null ? `${w.meanAmp.toFixed(2)} µV` : '–'}</td>
+                </th>
+                <td className="px-5 py-3 text-right">{isDiff ? '–' : w.n}</td>
+                <td className="px-5 py-3 text-right font-semibold">{uv(w.meanAmp)}</td>
+                <td className="px-5 py-3 text-right">{w.sme !== null ? `±${w.sme.toFixed(2)} µV` : '–'}</td>
+                <td className="px-5 py-3 text-right">{w.peak ? fmt.ms(w.peak.latency_s) : '–'}</td>
+                <td className="px-5 py-3 text-right">{uv(w.peak?.amplitude_uv)}</td>
+                <td className="px-5 py-3 text-right">{w.area50 !== null ? fmt.ms(w.area50) : '–'}</td>
               </tr>
             )
           })}
@@ -131,19 +151,20 @@ export function ErpMain() {
   const setStep = useAppStore((s) => s.setStep)
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-6">
       <StepHeader
-        step={4}
+        id="erp"
         title="Average epochs into ERPs"
         text="Averaging keeps activity that is time-locked to the event and cancels the rest. Compare conditions, find the peak, and see where on the scalp it is largest."
         aside={<ProcessStatus isFetching={isFetching} error={error} />}
       />
       {data && erp ? (
         <>
-          <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
+          <div className="grid gap-6 @4xl:grid-cols-[3fr_2fr]">
             <ErpPlot result={data} />
             <TopoPlot result={data} />
           </div>
+          <R2Plot result={data} />
           <PeakTable waves={erp.waves} difference={erp.difference} />
           <NoisePlot result={data} />
           <div className="flex justify-end">
@@ -153,7 +174,7 @@ export function ErpMain() {
           </div>
         </>
       ) : (
-        !error && <div className="bg-muted/40 h-96 animate-pulse rounded-xl" />
+        !error && <div role="status" className="bg-muted h-96 animate-pulse rounded-[20px]"><span className="sr-only">Loading ERPs…</span></div>
       )}
     </div>
   )

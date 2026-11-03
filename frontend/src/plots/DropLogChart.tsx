@@ -29,7 +29,7 @@ export function DropLogChart({ result }: { result: ProcessResult }) {
         yaxis: { automargin: true },
         bargap: 0.35,
       }),
-      height: 70 + 26 * Math.max(1, labels.length),
+      height: 90 + 32 * Math.max(1, labels.length),
     }
   }, [drop, theme])
 

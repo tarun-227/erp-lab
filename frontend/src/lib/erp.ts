@@ -39,6 +39,32 @@ export function meanInWindow(times: number[], wave: number[], start: number, end
   return count ? sum / count : null
 }
 
+/** Standardized measurement error of the mean amplitude: SD of single-trial window means over √N (Luck et al., 2021). */
+export function smeMeanAmplitude(trials: number[][], times: number[], start: number, end: number): number | null {
+  const idx = times.flatMap((t, i) => (t >= start && t <= end ? [i] : []))
+  if (trials.length < 2 || !idx.length) return null
+  const scores = trials.map((t) => idx.reduce((a, i) => a + t[i], 0) / idx.length)
+  const m = scores.reduce((a, b) => a + b, 0) / scores.length
+  const sd = Math.sqrt(scores.reduce((a, b) => a + (b - m) ** 2, 0) / (scores.length - 1))
+  return sd / Math.sqrt(scores.length)
+}
+
+/** Time that splits the component's area (its polarity only) in the window in half; more stable than the peak. */
+export function areaLatency(times: number[], wave: number[], start: number, end: number, polarity: 'positive' | 'negative', fraction = 0.5): number | null {
+  const pts: [number, number][] = []
+  times.forEach((t, i) => {
+    if (t >= start && t <= end) pts.push([t, Math.max(0, polarity === 'positive' ? wave[i] : -wave[i])])
+  })
+  const total = pts.reduce((a, [, v]) => a + v, 0)
+  if (!pts.length || total <= 0) return null
+  let acc = 0
+  for (const [t, v] of pts) {
+    acc += v
+    if (acc >= fraction * total) return t
+  }
+  return pts[pts.length - 1][0]
+}
+
 /** Small deterministic RNG (mulberry32) so the noise curve does not flicker between renders. */
 export function rng(seed: number): () => number {
   let a = seed >>> 0
