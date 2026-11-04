@@ -85,6 +85,20 @@ def test_upload_fif(tmp_path, sample):
     assert set(body["suggested_event_names"].values()) <= {"stimulus/compatible", "stimulus/incompatible", "response/correct", "response/error"}
 
 
+def test_upload_tidies_physionet_style_names(tmp_path, sample):
+    """PhysioNet EDFs name channels "Fcz." with no positions; uploads get 10-20 names and a scalp map."""
+    raw, _, _ = sample
+    raw = raw.copy().crop(0, 120).set_montage(None)
+    raw.rename_channels({n: n.capitalize() + "." for n in raw.ch_names if n != "STI"})
+    path = tmp_path / "physionet_style_raw.fif"
+    raw.save(path, verbose=False)
+    res = client.post("/api/data/upload", files={"files": (path.name, path.read_bytes(), "application/octet-stream")})
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["has_positions"]
+    assert {"FCz", "Pz", "Fp1"} <= set(body["summary"]["ch_names"])
+
+
 def test_upload_rejects_unknown_format():
     res = client.post("/api/data/upload", files={"files": ("notes.txt", io.BytesIO(b"hello"), "text/plain")})
     assert res.status_code == 422

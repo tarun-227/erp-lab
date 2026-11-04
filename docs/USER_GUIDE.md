@@ -29,9 +29,20 @@ Pick a source:
   error presses). Errors are followed by the error-related negativity (ERN) at FCz; stimuli evoke a P3 at Pz.
 - **Your own file**: `.fif`, `.edf`, `.bdf`, EEGLAB `.set` (upload the `.fdt` with it) or BrainVision
   `.vhdr` (with its `.eeg` and `.vmrk`). The file needs a stim channel or annotations. Recordings longer than
-  20 minutes are trimmed and fast recordings are resampled to 250 Hz.
+  20 minutes are trimmed and fast recordings are resampled to 250 Hz. Channel names such as PhysioNet's
+  `Fcz.` are tidied to their 10-20 spelling (`FCz`) so the scalp map works.
 
 The summary shows channels, sampling rate, duration and the events found.
+
+### Example files to upload
+
+`python scripts/make_upload_examples.py` writes two public recordings to `data/examples/`, taken from the
+datasets the course recommends (MOABB, MNE):
+
+| File | What it is | Try |
+|---|---|---|
+| `p300_cattan2019_s01_raw.fif` | Brain Invaders P300 on a PC (MOABB's Cattan2019_VR), 16 channels, 512 Hz | Target vs NonTarget at Pz, 250–500 ms, positive, reference **none** (the recording's own reference): a P300 of about +5 µV near 270 ms. Switch to the average reference and watch it shrink: with only 16 channels the average is not neutral |
+| `physionet_mi_s001r03.edf` | PhysioNet motor movement, run 3 (MNE's eegbci), 64 channels, 160 Hz, native EDF | A rejection lesson: at the default 100 µV every epoch is dropped. Raise the threshold to about 400 µV (or 0 = off), then compare T1 vs T2 (left vs right fist cues) at Oz |
 
 ## 2. Events
 

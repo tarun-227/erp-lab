@@ -55,7 +55,23 @@ def _ensure_positions(raw: mne.io.BaseRaw) -> None:
     has_pos = any(np.isfinite(raw.info["chs"][i]["loc"][:3]).all() and np.abs(raw.info["chs"][i]["loc"][:3]).sum() > 0 for i in eeg)
     if not has_pos:
         montage = mne.channels.make_standard_montage(montage_name())
+        _tidy_names(raw, montage.ch_names)
         raw.set_montage(montage, match_case=False, on_missing="ignore", verbose=False)
+
+
+def _tidy_names(raw: mne.io.BaseRaw, known: list[str]) -> None:
+    """Rename channels like PhysioNet's "Fc5." or "CZ" to their 10-20 spelling ("FC5", "Cz")."""
+    lookup = {n.lower(): n for n in known}
+    taken = set(raw.ch_names)
+    mapping = {}
+    for i in mne.pick_types(raw.info, eeg=True):
+        name = raw.ch_names[i]
+        clean = lookup.get(name.strip(" .").lower())
+        if clean and clean != name and clean not in taken:
+            mapping[name] = clean
+            taken.add(clean)
+    if mapping:
+        raw.rename_channels(mapping)
 
 
 def prepare(raw: mne.io.BaseRaw) -> tuple[mne.io.BaseRaw, np.ndarray, dict[str, str]]:

@@ -22,3 +22,6 @@ Thumbs.db
 
 # Local Claude Code config
 .claude/
+
+# Example uploads (rebuilt by scripts/make_upload_examples.py; third-party licences)
+data/examples/

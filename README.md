@@ -94,6 +94,15 @@ The real sample is participant 1 of the ERP CORE flanker task: Kappenman, E. S.,
 Stewart, A. X., & Luck, S. J. (2021). ERP CORE: An open resource for human event-related potential
 research. *NeuroImage*, 225, 117465. Distributed through MNE-Python (`mne.datasets.erp_core`).
 
+Example uploads (`scripts/make_upload_examples.py`, not committed):
+- Brain Invaders P300 on a PC, subject 1 (the file MOABB's `Cattan2019_VR` loads): Cattan, G., Andreev, A.,
+  Rodrigues, P. L. C., & Congedo, M. (2019). Dataset of an EEG-based BCI experiment in Virtual Reality and on a
+  Personal Computer. Zenodo, doi:10.5281/zenodo.2605205 (CC-BY-4.0).
+- PhysioNet EEG Motor Movement/Imagery, subject 1, run 3, via MNE: Schalk, G., McFarland, D. J., Hinterberger, T.,
+  Birbaumer, N., & Wolpaw, J. R. (2004). BCI2000: A general-purpose brain-computer interface (BCI) system.
+  *IEEE Transactions on Biomedical Engineering*, 51(6), 1034–1043; Goldberger, A. L., et al. (2000).
+  PhysioBank, PhysioToolkit, and PhysioNet. *Circulation*, 101(23), e215–e220.
+
 Built with MNE-Python, FastAPI, React, Plotly, Tailwind CSS and shadcn/ui.
 
 ## Use of AI
