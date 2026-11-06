@@ -52,7 +52,7 @@ export function ExportMain() {
   const { data: exported, error } = useQuery({
     queryKey: ['export', dataset.session_id, debounced],
     queryFn: () => api.export(dataset.session_id, debounced),
-    enabled: !paramsProblem(debounced),
+    enabled: !paramsProblem(debounced, dataset.summary.sfreq),
     staleTime: Infinity,
   })
 
@@ -139,7 +139,7 @@ export function ExportMain() {
           </div>
         </header>
         <pre tabIndex={0} role="region" aria-label="Generated Python script" className="bg-muted/40 max-h-[560px] overflow-auto p-5 font-mono text-[13px] leading-relaxed">
-          {exported ? highlight(exported.script) : error ? (error as Error).message : paramsProblem(debounced) ?? 'Generating…'}
+          {exported ? highlight(exported.script) : error ? (error as Error).message : paramsProblem(debounced, dataset.summary.sfreq) ?? 'Generating…'}
         </pre>
       </section>
     </div>

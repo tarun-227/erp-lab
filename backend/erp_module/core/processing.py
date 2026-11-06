@@ -12,8 +12,22 @@ import mne
 import numpy as np
 
 
+def check_settings(raw: mne.io.BaseRaw, h_freq: float | None, reference: str) -> None:
+    """Raise a ValueError a student can act on when the settings do not fit this recording."""
+    nyquist = raw.info["sfreq"] / 2
+    if h_freq and h_freq >= nyquist:
+        raise ValueError(
+            f"The low-pass cut-off ({h_freq:g} Hz) must be below half the sampling rate ({nyquist:g} Hz). "
+            "Choose a lower low-pass or switch it off."
+        )
+    eeg = [raw.ch_names[i] for i in mne.pick_types(raw.info, eeg=True)]
+    if reference not in ("average", "none") and reference not in eeg:
+        raise ValueError(f'The reference channel "{reference}" is not in this recording.')
+
+
 def preprocess(raw: mne.io.BaseRaw, l_freq: float | None, h_freq: float | None, reference: str) -> mne.io.BaseRaw:
     """Band-pass filter the EEG channels, then re-reference ("average", "none" or a channel name)."""
+    check_settings(raw, h_freq, reference)
     out = raw.copy().load_data()
     if l_freq or h_freq:
         out.filter(l_freq or None, h_freq or None, picks="eeg", verbose=False)
@@ -33,6 +47,11 @@ class EpochResult:
     """Peak-to-peak amplitude per epoch and channel, in µV."""
     n_events: int
     n_edge: int
+    """Events whose window runs off the recording."""
+    n_bad_span: int = 0
+    """Events whose window overlaps an annotation marked BAD (or EDGE); MNE skips these."""
+    n_duplicate: int = 0
+    """Second events at the same sample as another one."""
 
     @property
     def worst_channel(self) -> list[str]:
@@ -48,6 +67,8 @@ class EpochResult:
         return {
             "total_events": self.n_events,
             "edge": self.n_edge,
+            "bad_span": self.n_bad_span,
+            "duplicate": self.n_duplicate,
             "rejected": int((~self.kept).sum()),
             "kept": int(self.kept.sum()),
             "by_channel": dict(sorted(by_channel.items(), key=lambda kv: -kv[1])),
@@ -77,4 +98,10 @@ def make_epochs(
     data = epochs.get_data(copy=False)
     ptp_uv = (data.max(axis=-1) - data.min(axis=-1)) * 1e6
     kept = ~(ptp_uv > reject_uv).any(axis=1) if reject_uv else np.ones(len(epochs), bool)
-    return EpochResult(epochs, kept, ptp_uv, n_events=len(selected), n_edge=len(selected) - len(epochs))
+    logs = [log for log in epochs.drop_log if log]
+    n_edge = sum(any(r in ("NO_DATA", "TOO_SHORT") for r in log) for log in logs)
+    n_bad = sum(any(r.upper().startswith(("BAD", "EDGE")) for r in log) for log in logs)
+    return EpochResult(
+        epochs, kept, ptp_uv, n_events=len(selected), n_edge=n_edge, n_bad_span=n_bad,
+        n_duplicate=len(selected) - len(epochs) - n_edge - n_bad,
+    )

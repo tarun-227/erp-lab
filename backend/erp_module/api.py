@@ -83,14 +83,23 @@ def upload(files: list[UploadFile] = File(...)) -> LoadResponse:
                     out.write(chunk)
             paths.append(path)
         try:
-            raw, events, names = io.prepare(io.read_upload(paths))
+            if not any(p.name.lower().endswith(io.READABLE) for p in paths):
+                raise HTTPException(422, f"Unsupported file type. Upload one of: {', '.join(io.READABLE)}")
+            try:
+                loaded = io.read_upload(paths)
+            except Exception as err:  # MNE readers raise many different types for malformed files
+                raise HTTPException(422, io.read_error_message(err, paths, Path(tmp))) from None
+            notes: list[str] = []
+            raw, events, names = io.prepare(loaded, notes)
         except ValueError as err:
             raise HTTPException(422, str(err)) from None
-        except Exception as err:  # MNE readers raise many different types for malformed files
-            raise HTTPException(422, f"Could not read the file: {err}") from None
+        except HTTPException:
+            raise
+        except Exception as err:
+            raise HTTPException(422, io.read_error_message(err, paths, Path(tmp))) from None
     session = Session(raw=raw, events=events, source="upload", meta={"filename": paths[0].name})
     sid = store.create(session)
-    return _load_response(sid, session, names, f"Uploaded file {paths[0].name}.")
+    return _load_response(sid, session, names, " ".join([f"Uploaded file {paths[0].name}.", *notes]))
 
 
 @router.get("/sessions/{sid}/events")
@@ -119,7 +128,10 @@ def process(sid: str, params: ProcessParams) -> dict:
 @router.post("/sessions/{sid}/raw")
 def raw_window(sid: str, req: RawWindowRequest) -> dict:
     session = _session(sid)
-    pre = session.preprocessed(req.params.l_freq, req.params.h_freq, req.params.reference)
+    try:
+        pre = session.preprocessed(req.params.l_freq, req.params.h_freq, req.params.reference)
+    except ValueError as err:
+        raise HTTPException(422, str(err)) from None
     return pipeline.raw_window(pre, req.start_s, req.duration_s)
 
 

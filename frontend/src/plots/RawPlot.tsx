@@ -9,6 +9,7 @@ import { useDebounced } from '@/hooks/useProcess'
 import { useConditionColors, usePlotTheme } from '@/hooks/usePlotTheme'
 import { api } from '@/lib/api'
 import { REJECT_COLOR, hexToRgba } from '@/lib/colors'
+import { paramsProblem } from '@/lib/presets'
 import type { ProcessResult } from '@/lib/types'
 import { useAppStore } from '@/store/useAppStore'
 import { PlotlyChart, baseLayout } from './PlotlyChart'
@@ -30,12 +31,14 @@ export function RawPlot({ result }: { result: ProcessResult }) {
   const highlight = useAppStore((s) => s.highlight)
   const theme = usePlotTheme()
   const colorOf = useConditionColors()
+  const sfreq = useAppStore((s) => s.dataset?.summary.sfreq)
   const debounced = useDebounced(params)
   const start = useDebounced(rawStart, 120)
 
   const { data: raw } = useQuery({
     queryKey: ['raw', sid, debounced.l_freq, debounced.h_freq, debounced.reference, start],
     queryFn: ({ signal }) => api.raw(sid, debounced, start, WINDOW_S, signal),
+    enabled: !paramsProblem(debounced, sfreq),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   })

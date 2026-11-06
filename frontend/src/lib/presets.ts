@@ -16,6 +16,14 @@ export const BASE_PARAMS: Omit<ProcessParams, 'conditions'> = {
   polarity: 'positive',
 }
 
+export const HIGH_PASS = [0, 0.1, 0.3, 0.5, 1, 2, 5]
+export const LOW_PASS = [5, 10, 15, 20, 30, 40, 60, 100, 0]
+
+/** Low-pass choices this recording allows: a cut-off must be below half the sampling rate (0 = off). */
+export function lowPassOptions(sfreq: number): number[] {
+  return LOW_PASS.filter((f) => f === 0 || f < sfreq / 2)
+}
+
 export interface Preset {
   id: string
   label: string
@@ -68,7 +76,7 @@ export function pickChannel(dataset: LoadResponse, wanted: string): string {
 export function applyPreset(dataset: LoadResponse, preset: Preset, current?: ProcessParams): ProcessParams {
   const base = current ?? { ...BASE_PARAMS, conditions: [] }
   const params = { ...base, ...preset.params, conditions: conditionsByName(dataset, preset.conditions) }
-  return { ...params, channel: pickChannel(dataset, params.channel) }
+  return fitFilters({ ...params, channel: pickChannel(dataset, params.channel) }, dataset.summary.sfreq)
 }
 
 export function defaultParams(dataset: LoadResponse): ProcessParams {
@@ -79,17 +87,26 @@ export function defaultParams(dataset: LoadResponse): ProcessParams {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 2)
     .map(([code]) => ({ code: Number(code), name: dataset.suggested_event_names[code] ?? `Code ${code}` }))
-  return { ...BASE_PARAMS, conditions: codes, channel: pickChannel(dataset, 'Cz') }
+  return fitFilters({ ...BASE_PARAMS, conditions: codes, channel: pickChannel(dataset, 'Cz') }, dataset.summary.sfreq)
+}
+
+/** Lower the low-pass to the highest choice below Nyquist when a slow recording cannot take it. */
+export function fitFilters(p: ProcessParams, sfreq: number): ProcessParams {
+  if (!p.h_freq || p.h_freq < sfreq / 2) return p
+  const below = lowPassOptions(sfreq).filter((f) => f > 0)
+  return { ...p, h_freq: below.length ? below[below.length - 1] : 0 }
 }
 
 /** Client-side check of the rules the backend enforces, so we never send a request that must fail. */
-export function paramsProblem(p: ProcessParams): string | null {
+export function paramsProblem(p: ProcessParams, sfreq?: number): string | null {
   const names = p.conditions.map((c) => c.name.trim())
   if (!p.conditions.length) return 'Pick at least one condition in the Events step.'
   if (names.some((n) => !n) || new Set(names).size !== names.length) return 'Condition names must be unique and not empty.'
   if (p.baseline && !(p.tmin <= p.baseline_start && p.baseline_start < p.baseline_end && p.baseline_end <= p.tmax))
     return 'The baseline window must lie inside the epoch window.'
   if (p.l_freq && p.h_freq && p.l_freq >= p.h_freq) return 'The high-pass cut-off must be below the low-pass cut-off.'
+  if (sfreq && p.h_freq && p.h_freq >= sfreq / 2)
+    return `The low-pass cut-off must be below half the sampling rate (${sfreq / 2} Hz).`
   if (p.peak_start >= p.peak_end) return 'The peak window must have positive length.'
   return null
 }

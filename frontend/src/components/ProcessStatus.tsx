@@ -5,7 +5,8 @@ import { useAppStore } from '@/store/useAppStore'
 /** Explains why plots are missing or stale: invalid settings, a server error, or a refresh in progress. */
 export function ProcessStatus({ isFetching, error }: { isFetching: boolean; error: Error | null }) {
   const params = useAppStore((s) => s.params)
-  const problem = params ? paramsProblem(params) : null
+  const sfreq = useAppStore((s) => s.dataset?.summary.sfreq)
+  const problem = params ? paramsProblem(params, sfreq) : null
   if (problem || error) {
     return (
       <div role="alert" className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-lg px-3 py-2 text-sm">

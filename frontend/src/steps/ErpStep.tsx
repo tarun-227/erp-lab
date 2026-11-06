@@ -6,6 +6,7 @@ import { ProcessStatus } from '@/components/ProcessStatus'
 import { useErpWaves, type Wave } from '@/hooks/useErp'
 import { useConditionColors } from '@/hooks/usePlotTheme'
 import { useProcess } from '@/hooks/useProcess'
+import type { ProcessResult } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { ErpPlot } from '@/plots/ErpPlot'
 import { NoisePlot } from '@/plots/NoisePlot'
@@ -145,6 +146,25 @@ function PeakTable({ waves, difference }: { waves: Wave[]; difference: Wave | nu
   )
 }
 
+/** Shown when every epoch was dropped, so the empty plots below are explained. */
+function NothingToAverage({ result }: { result: ProcessResult }) {
+  const setStep = useAppStore((s) => s.setStep)
+  const threshold = useAppStore((s) => s.params?.reject_uv)
+  const { drop } = result
+  const why = drop.rejected
+    ? `All ${drop.rejected} epochs swing more than the ${threshold} µV rejection threshold on at least one channel. Raise the threshold or switch it off.`
+    : 'None of the events could be cut into an epoch: their windows run off the recording or overlap segments marked bad. Try a shorter epoch window.'
+  return (
+    <div role="alert" className="bg-warning/10 border-warning/40 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-5 py-4">
+      <div>
+        <p className="font-semibold">No epochs are left to average</p>
+        <p className="text-muted-foreground text-sm">{why}</p>
+      </div>
+      <Button variant="outline" onClick={() => setStep('epoching')}>Back to Epoching</Button>
+    </div>
+  )
+}
+
 export function ErpMain() {
   const { data, isFetching, error } = useProcess()
   const erp = useErpWaves(data)
@@ -160,6 +180,7 @@ export function ErpMain() {
       />
       {data && erp ? (
         <>
+          {data.drop.kept === 0 && <NothingToAverage result={data} />}
           <div className="grid gap-6 @4xl:grid-cols-[3fr_2fr]">
             <ErpPlot result={data} />
             <TopoPlot result={data} />

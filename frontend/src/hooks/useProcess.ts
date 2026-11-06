@@ -19,11 +19,12 @@ export function useDebounced<T>(value: T, ms = 200): T {
 export function useProcess() {
   const sid = useAppStore((s) => s.dataset?.session_id)
   const params = useAppStore((s) => s.params)
+  const sfreq = useAppStore((s) => s.dataset?.summary.sfreq)
   const debounced = useDebounced(params)
   return useQuery({
     queryKey: ['process', sid, debounced],
     queryFn: ({ signal }) => api.process(sid!, debounced as ProcessParams, signal),
-    enabled: Boolean(sid && debounced && !paramsProblem(debounced)),
+    enabled: Boolean(sid && debounced && !paramsProblem(debounced, sfreq)),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
     retry: false,

@@ -92,6 +92,26 @@ cd frontend && npx playwright test
 - `frontend/e2e/`: a Playwright run through all six steps against the real backend. Locally it uses Edge
   (set `PW_CHANNEL=chrome` for Chrome) and `PYTHON` to pick the interpreter, e.g.
   `PYTHON=../.venv/Scripts/python.exe npx playwright test`.
+- `backend/tests/test_robustness.py`: damaged uploads (empty, random bytes, HTML, truncated, BrainVision
+  without its companions), recordings with NaN gaps, BAD segments, extreme noise, drift, spikes, flat or
+  zero channels, wrong units, and parameter extremes (filters, windows, thresholds, settings that do not
+  fit a slow recording). The app must answer with data or a clear 4xx message, never a 500.
+
+### Robustness sweep (manual, slower)
+
+`scripts/robustness/` stress-tests the whole API with about 50 generated cases (every upload format, damaged
+files, noisy and odd recordings, a 28-minute recording, 2048 Hz and 64 Hz data, >300 MB) and with real
+recordings, sweeping filters, references, channels, windows, baselines, thresholds and peak windows plus
+150 random combinations per recording:
+
+```bash
+python scripts/robustness/make_cases.py . cases
+python scripts/robustness/sweep_api.py . cases report.jsonl --extra data/examples/p300_cattan2019_s01_raw.fif
+python scripts/robustness/summarize.py report.jsonl
+```
+
+A call fails the sweep if it raises (HTTP 500 or non-finite numbers) or returns inconsistent results
+(trial counts that do not add up, a wrong time axis). Clean 4xx answers are expected for invalid settings.
 
 ## Common changes
 

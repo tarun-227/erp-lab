@@ -54,6 +54,7 @@ def build_context(session: Session | None, step: str) -> str:
     worst = ", ".join(f"{ch} {n}" for ch, n in list(d["by_channel"].items())[:4]) or "none"
     lines.append(
         f"Epochs: {d['total_events']} events, {d['edge']} too close to the recording edge, "
+        f"{d.get('bad_span', 0)} inside segments marked bad, "
         f"{d['rejected']} rejected (blamed channel: {worst}), {d['kept']} kept."
     )
     for c in r["conditions"]:

@@ -3,15 +3,14 @@ import { Button } from '@/components/ui/button'
 import { Nudge, PanelSection, ParamControl, RangeControl, SelectControl, SwitchControl, fmt } from '@/components/ParamControl'
 import { ProcessStatus } from '@/components/ProcessStatus'
 import { useKeptToast, useProcess } from '@/hooks/useProcess'
-import type { ProcessParams } from '@/lib/types'
+import { HIGH_PASS, lowPassOptions } from '@/lib/presets'
+import type { DropSummary, ProcessParams } from '@/lib/types'
 import { DropLogChart } from '@/plots/DropLogChart'
 import { ErpImagePlot } from '@/plots/ErpImagePlot'
 import { RawPlot } from '@/plots/RawPlot'
 import { useAppStore } from '@/store/useAppStore'
 import { Stat, StepHeader } from './StepHeader'
 
-export const HIGH_PASS = [0, 0.1, 0.3, 0.5, 1, 2, 5]
-export const LOW_PASS = [5, 10, 15, 20, 30, 40, 60, 100, 0]
 
 const nearest = (list: number[], v: number) => list.reduce((best, x, i) => (Math.abs(x - v) < Math.abs(list[best] - v) ? i : best), 0)
 
@@ -36,12 +35,26 @@ export function ChannelSelect() {
   )
 }
 
+/** Events that never became epochs: off the recording edge, inside a BAD segment, or duplicated. */
+function NotCutStat({ drop }: { drop: DropSummary }) {
+  const parts: [number, string][] = [
+    [drop.edge, 'off the recording edge'],
+    [drop.bad_span ?? 0, 'in bad segments'],
+    [drop.duplicate ?? 0, 'duplicate events'],
+  ]
+  const total = parts.reduce((n, [k]) => n + k, 0)
+  if (total === drop.edge) return <Stat icon={ScissorsIcon} label="Too close to edge" value={drop.edge} tone="muted" sub="window runs off the recording" />
+  const sub = parts.filter(([k]) => k).map(([k, what]) => `${k} ${what}`).join(' · ')
+  return <Stat icon={ScissorsIcon} label="Not cut" value={total} tone="muted" sub={sub} />
+}
+
 export function EpochingPanel() {
   const dataset = useAppStore((s) => s.dataset!)
   const p = useAppStore((s) => s.params!)
   const setParams = useAppStore((s) => s.setParams)
   const { data } = useProcess()
-  const lpIndex = p.h_freq ? nearest(LOW_PASS.slice(0, -1), p.h_freq) : LOW_PASS.length - 1
+  const lowPass = lowPassOptions(dataset.summary.sfreq)
+  const lpIndex = p.h_freq ? nearest(lowPass.slice(0, -1), p.h_freq) : lowPass.length - 1
   const rejectedShare = data ? data.drop.rejected / Math.max(1, data.drop.rejected + data.drop.kept) : 0
 
   return (
@@ -79,10 +92,10 @@ export function EpochingPanel() {
           onChange={(i) => setParams({ l_freq: HIGH_PASS[i] })}
         />
         <ParamControl
-          id="lp" label="Low-pass" value={lpIndex} min={0} max={LOW_PASS.length - 1} step={1}
-          format={(i) => fmt.hz(LOW_PASS[i])}
+          id="lp" label="Low-pass" value={lpIndex} min={0} max={lowPass.length - 1} step={1}
+          format={(i) => fmt.hz(lowPass[i])}
           help="Removes fast activity (muscle, line noise) above this frequency. 30 Hz is common for ERPs."
-          onChange={(i) => setParams({ h_freq: LOW_PASS[i] })}
+          onChange={(i) => setParams({ h_freq: lowPass[i] })}
         />
         {p.l_freq > 1 && <Nudge>A high-pass above 1 Hz removes slow activity: slow components (P3, ERN) shrink and change shape. Pin the ERP first to compare.</Nudge>}
         <SelectControl
@@ -131,7 +144,7 @@ export function EpochingMain() {
           <div className="grid grid-cols-2 gap-4 @3xl:grid-cols-4">
             <Stat icon={CheckCircle2Icon} label="Epochs kept" value={`${data.drop.kept} / ${data.drop.total_events}`} sub="go into the averages" tone="good" />
             <Stat icon={XCircleIcon} label="Rejected" value={data.drop.rejected} tone={data.drop.rejected ? 'bad' : 'muted'} sub="swing above the threshold" />
-            <Stat icon={ScissorsIcon} label="Too close to edge" value={data.drop.edge} tone="muted" sub="window runs off the recording" />
+            <NotCutStat drop={data.drop} />
             <Stat
               icon={TagsIcon}
               label="Kept per condition"

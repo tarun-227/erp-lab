@@ -64,6 +64,10 @@ export interface ConditionResult {
 export interface DropSummary {
   total_events: number
   edge: number
+  /** Events whose window overlaps a segment marked BAD in the recording. */
+  bad_span?: number
+  /** Events at the same sample as an earlier one. */
+  duplicate?: number
   rejected: number
   kept: number
   by_channel: Record<string, number>
