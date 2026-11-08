@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { conditionColor } from '@/lib/colors'
+import { SAMPLES, type SampleId } from '@/lib/samples'
 import { formatDuration } from '@/lib/steps'
 import type { LoadResponse } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -38,29 +39,52 @@ function useLoaded() {
 
 function SamplePanel() {
   const onLoaded = useLoaded()
+  const selected = useAppStore((s) => s.sampleId)
+  const setSelected = useAppStore((s) => s.setSampleId)
+  const loaded = useAppStore((s) => s.dataset?.sample_id)
   const { data: health } = useQuery({ queryKey: ['health'], queryFn: api.health, staleTime: 60_000 })
   const load = useMutation({
-    mutationFn: api.loadSample,
+    mutationFn: (id: SampleId) => api.loadSample(id),
     onSuccess: onLoaded,
     onError: (err) => toast.error('Could not load the sample', { description: err.message }),
   })
+  const sample = SAMPLES.find((x) => x.id === selected) ?? SAMPLES[0]
+  const missing = health?.samples?.[sample.id] === false
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-extrabold">ERP CORE: flanker task</h2>
-      <p className="text-muted-foreground text-[15px] leading-relaxed">
-        One participant from ERP CORE (Kappenman et al., 2021, NeuroImage). A central arrow points left or right and is
-        flanked by arrows pointing the same way (compatible) or the other way (incompatible). The participant presses the
-        button for the central arrow; some presses are errors.
-      </p>
+      <h2 id="sample-title" className="text-lg font-extrabold">Choose an experiment</h2>
+      <div role="radiogroup" aria-labelledby="sample-title" className="space-y-2">
+        {SAMPLES.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            role="radio"
+            aria-checked={x.id === sample.id}
+            onClick={() => setSelected(x.id)}
+            className={cn(
+              'w-full rounded-xl border-2 px-3 py-2 text-left transition-colors duration-200',
+              x.id === sample.id ? 'border-primary bg-primary-soft' : 'border-input hover:border-primary/40',
+            )}
+          >
+            <span className="flex items-center justify-between gap-2">
+              <span className="font-semibold">{x.title}</span>
+              {loaded === x.id && <Badge className="bg-success-soft text-success">Loaded</Badge>}
+            </span>
+            <span className="text-muted-foreground block text-sm">{x.kind}</span>
+          </button>
+        ))}
+      </div>
+      <p className="text-muted-foreground text-[15px] leading-relaxed">{sample.text}</p>
       <ul className="space-y-2 text-[15px] leading-snug">
-        <li className="bg-primary-soft rounded-xl px-3 py-2"><b>ERN</b>: a negative wave at FCz right after error responses.</li>
-        <li className="bg-primary-soft rounded-xl px-3 py-2"><b>P3</b>: a positive wave at Pz after the stimulus.</li>
+        {sample.lookFor.map((item) => (
+          <li key={item.name} className="bg-primary-soft rounded-xl px-3 py-2"><b>{item.name}</b>: {item.what}</li>
+        ))}
       </ul>
-      <Button size="lg" className="w-full" disabled={load.isPending || health?.real_sample === false} onClick={() => load.mutate()}>
+      <Button size="lg" className="w-full" disabled={load.isPending || missing} onClick={() => load.mutate(sample.id)}>
         {load.isPending ? <Loader2Icon className="animate-spin" /> : <DatabaseIcon />} Load sample recording
       </Button>
-      {health?.real_sample === false && (
-        <p role="alert" className="text-destructive text-sm">The sample file is missing. Run <code>python scripts/make_sample_data.py</code>.</p>
+      {missing && (
+        <p role="alert" className="text-destructive text-sm">This sample file is missing. Run <code>python scripts/make_sample_data.py {sample.id}</code>.</p>
       )}
     </div>
   )
@@ -133,7 +157,7 @@ export function LoadPanel() {
 }
 
 const SOURCES: { id: LoadSource; icon: typeof DatabaseIcon; title: string; text: string }[] = [
-  { id: 'sample', icon: DatabaseIcon, title: 'Sample recording', text: 'A flanker task from ERP CORE, with correct and error responses. Best place to start.' },
+  { id: 'sample', icon: DatabaseIcon, title: 'Sample recording', text: 'Three real experiments: a flanker task, an auditory oddball and flickering light. Best place to start.' },
   { id: 'upload', icon: UploadIcon, title: 'Your own file', text: 'Upload .fif, .edf, .bdf, .set or BrainVision files with event markers.' },
 ]
 
@@ -258,7 +282,7 @@ export function LoadMain() {
             <Stat icon={ActivityIcon} label="Channels" value={String(dataset.summary.n_channels)} sub="electrodes on the scalp" />
             <Stat icon={WavesIcon} label="Sampling rate" value={`${dataset.summary.sfreq} Hz`} sub="samples per second" />
             <Stat icon={ClockIcon} label="Duration" value={formatDuration(dataset.summary.duration_s)} />
-            <Stat icon={ZapIcon} label="Events" value={String(dataset.summary.n_events)} sub="stimuli and responses" />
+            <Stat icon={ZapIcon} label="Events" value={String(dataset.summary.n_events)} sub="moments to cut around" />
           </div>
 
           <div className="bg-card shadow-soft space-y-5 rounded-[20px] border p-5">

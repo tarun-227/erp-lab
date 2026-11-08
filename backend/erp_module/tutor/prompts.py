@@ -21,7 +21,9 @@ throws away good data and lowers the trial count.
 - Average reference spreads activity across all channels; a mastoid reference changes the amplitude at each site.
 - Latency jitter across trials smears and flattens the average.
 - P300: positive, 250-500 ms, parietal (Pz), larger for rare targets. N1: negative, ~100 ms, fronto-central. \
-ERN: negative, 0-100 ms after an error response, fronto-central (FCz/Cz)."""
+ERN: negative, 0-100 ms after an error response, fronto-central (FCz/Cz). \
+P3a: earlier and more central than the P300, to surprising distractors. \
+SSVEP: an oscillation at the flicker frequency over occipital sites (O1/Oz/O2), sustained rather than one peak."""
 
 SOCRATIC = """Tutoring mode: Socratic. Start with a guiding question or a hint that points to the relevant plot or \
 number, and only give the full answer if the student asks again or is clearly stuck."""

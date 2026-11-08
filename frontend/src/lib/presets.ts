@@ -54,10 +54,40 @@ const PRESETS: Preset[] = [
       tmin: -0.2, tmax: 0.8, baseline_start: -0.2, baseline_end: 0, reject_uv: 150,
     },
   },
+  {
+    id: 'oddball-p300',
+    label: 'Oddball P300',
+    description: 'Stimulus-locked P300 at CPz for rare target tones vs frequent tones, 250–600 ms.',
+    conditions: ['tone/standard', 'tone/oddball'],
+    params: {
+      channel: 'CPz', peak_start: 0.25, peak_end: 0.6, polarity: 'positive',
+      tmin: -0.2, tmax: 0.8, baseline_start: -0.2, baseline_end: 0, reject_uv: 150,
+    },
+  },
+  {
+    id: 'oddball-noise',
+    label: 'Noise bursts',
+    description: 'An earlier, more central response at Cz to surprising noise vs frequent tones, 200–450 ms.',
+    conditions: ['tone/standard', 'sound/noise'],
+    params: {
+      channel: 'Cz', peak_start: 0.2, peak_end: 0.45, polarity: 'positive',
+      tmin: -0.2, tmax: 0.8, baseline_start: -0.2, baseline_end: 0, reject_uv: 150,
+    },
+  },
+  {
+    id: 'ssvep',
+    label: '12 Hz vs 15 Hz flicker',
+    description: 'Steady-state response at O2: the average keeps following the flicker. 1–40 Hz filter, so the rhythm stands out.',
+    conditions: ['flicker/12 Hz', 'flicker/15 Hz'],
+    params: {
+      channel: 'O2', l_freq: 1, h_freq: 40, peak_start: 0, peak_end: 0.8, polarity: 'positive',
+      tmin: -0.2, tmax: 0.8, baseline_start: -0.2, baseline_end: 0, reject_uv: 150,
+    },
+  },
 ]
 
 export function presetsFor(dataset: LoadResponse): Preset[] {
-  // A preset appears whenever the recording has its event names (the bundled sample, or an upload of it).
+  // A preset appears whenever the recording has its event names (a bundled sample, or an upload of it).
   const available = new Set(Object.values(dataset.suggested_event_names))
   return PRESETS.filter((p) => p.conditions.every((c) => available.has(c)))
 }

@@ -34,6 +34,8 @@ def build_context(session: Session | None, step: str) -> str:
         f"Data: {session.source} recording, {len(raw.ch_names)} channels, {raw.info['sfreq']:.0f} Hz, "
         f"{raw.times[-1]:.0f} s, {len(session.events)} events."
     )
+    if description := session.meta.get("description"):
+        lines.append(f"Experiment: {description}")
     last = session.meta.get("last")
     if not last:
         lines.append("Epochs have not been computed yet.")

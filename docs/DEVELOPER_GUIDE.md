@@ -26,7 +26,7 @@ one multiply by the interpolation matrix from `core/topo.py`.
 | `core/topo.py` | 2D electrode projection and thin-plate-spline interpolation matrix |
 | `core/pipeline.py` | Runs epochs → ERPs for one parameter set and packages the JSON for the frontend |
 | `core/codegen.py` | Turns parameters into a standalone MNE script |
-| `sessions.py` | In-memory sessions, plus one shared, bounded cache of filtered copies (4 at most, ~55 MB each for the sample); sessions on the same recording share copies |
+| `sessions.py` | In-memory sessions, plus one shared, bounded cache of filtered copies (4 at most, ~55 MB each for the sample); sessions on the same recording share copies. `latest_only` runs a session's newest request and skips ones it replaced (HTTP 409), so plots keep up with moving sliders |
 | `schemas.py` | Pydantic models; `ProcessParams` validates windows, filters and condition names |
 | `api.py` | Routes under `/api`; serves `frontend/dist` at `/` |
 | `tutor/` | Provider routing, context builder, prompts, tool definitions and the chat/quiz/grade routes |
@@ -35,7 +35,7 @@ Endpoints:
 
 | Method and path | Purpose |
 |---|---|
-| `POST /api/data/sample` | Load the bundled ERP CORE sample (read once, then shared read-only between sessions) |
+| `POST /api/data/sample` | Load a bundled sample: `{"sample": "flanker" \| "oddball" \| "ssvep"}`, default flanker (each read once, then shared read-only between sessions) |
 | `POST /api/data/upload` | Multipart upload (`files`) |
 | `GET /api/sessions/{sid}/events` | All event times and codes |
 | `POST /api/sessions/{sid}/process` | Epochs + ERPs for a `ProcessParams` body |
@@ -92,6 +92,9 @@ cd frontend && npx playwright test
 - `frontend/e2e/`: a Playwright run through all six steps against the real backend. Locally it uses Edge
   (set `PW_CHANNEL=chrome` for Chrome) and `PYTHON` to pick the interpreter, e.g.
   `PYTHON=../.venv/Scripts/python.exe npx playwright test`.
+- `backend/tests/test_samples.py`: each bundled sample must show the effect it is offered for (ERN and P3; N1,
+  P300 and the noise response; the flicker frequency over occipital sites), and the exported script must
+  reproduce the app's ERP on it. If you change a sample or the pipeline, these tell you the teaching still holds.
 - `backend/tests/test_robustness.py`: damaged uploads (empty, random bytes, HTML, truncated, BrainVision
   without its companions), recordings with NaN gaps, BAD segments, extreme noise, drift, spikes, flat or
   zero channels, wrong units, and parameter extremes (filters, windows, thresholds, settings that do not

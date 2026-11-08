@@ -23,6 +23,11 @@ class LoadResponse(BaseModel):
     suggested_event_names: dict[str, str] = {}
     description: str = ""
     has_positions: bool = True
+    sample_id: str | None = None
+
+
+class SampleRequest(BaseModel):
+    sample: Literal["flanker", "oddball", "ssvep"] = "flanker"
 
 
 class Condition(BaseModel):

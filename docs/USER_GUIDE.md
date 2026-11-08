@@ -23,10 +23,14 @@ to save a PNG). For the biggest plots, collapse the left panel and close the Gui
 
 Pick a source:
 
-- **Sample recording**: one participant from the ERP CORE flanker task. A central arrow is flanked by
-  arrows pointing the same way (compatible) or the other way (incompatible); the participant presses a button
-  for the central arrow. It has stimulus events (compatible / incompatible) and response events (correct /
-  error presses). Errors are followed by the error-related negativity (ERN) at FCz; stimuli evoke a P3 at Pz.
+- **Sample recording**: pick one of three real experiments. Each opens with settings that show its effect.
+
+  | Sample | The experiment | What it shows, measured in this app |
+  |---|---|---|
+  | **Flanker task** (ERP CORE) | A central arrow flanked by arrows pointing the same or the other way; button press for the central arrow | ERN at FCz within 100 ms of an error; P3 at Pz after the stimulus |
+  | **Auditory oddball** (OpenNeuro ds003061) | Frequent low tones, rare target tones that need a keypress, rare noise bursts; eyes closed | N1 at Cz, −2.5 µV near 120 ms; P300 at CPz, target − standard +7.2 ± 0.7 µV, peak near 424 ms; noise bursts peak earlier at Cz, near 356 ms |
+  | **Flickering light (SSVEP)** (MNE example data) | A stimulus flickers at 12 or 15 Hz for 20 s at a time | The average at O2 oscillates at the flicker rate: count 12 or 15 cycles per second. Each trial is split into 1 s segments, so an event here is a segment start |
+
 - **Your own file**: `.fif`, `.edf`, `.bdf`, EEGLAB `.set` (upload the `.fdt` with it) or BrainVision
   `.vhdr` (with its `.eeg` and `.vmrk`). The file needs a stim channel or annotations. Recordings longer than
   20 minutes are trimmed and fast recordings are resampled to 250 Hz. Channel names such as PhysioNet's

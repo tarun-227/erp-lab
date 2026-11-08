@@ -16,15 +16,15 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
     body: [
       'An event-related potential (ERP) is the small, time-locked voltage change the brain produces in response to an event, such as a tone or a flash. It is usually only a few microvolts, buried in background EEG that is ten times larger.',
       'The trick is repetition: show the same kind of event many times, cut out the EEG around each one, and average. Activity that is locked to the event survives; everything else averages towards zero.',
-      'The sample recording is a flanker task from ERP CORE. A central arrow is flanked by arrows pointing the same way (compatible) or the other way (incompatible), and the participant presses a button for the central arrow. Stimuli evoke a P3 over Pz; error responses are followed within about 100 ms by the error-related negativity (ERN), largest at FCz.',
+      'There are three sample recordings, each a different kind of experiment. In the flanker task, errors are followed within about 100 ms by the error-related negativity (ERN), largest at FCz, and stimuli evoke a P3 over Pz. In the auditory oddball, every sound evokes an N1 at about 100 ms and rare target tones evoke a large P300 around CPz. In the flicker recording the visual cortex follows the stimulus, so the average oscillates at 12 or 15 Hz over the back of the head instead of showing a single peak.',
     ],
     tryThis: [
-      'Load the sample and count the events: how many error responses are there compared with correct ones?',
-      'Later, in the ERP step, set "Trials averaged" to 1 and see whether you can spot the ERN in a single error trial.',
+      'Load each sample and count its events. How many error responses does the flanker task have compared with correct ones? How many target tones does the oddball have compared with standard tones?',
+      'Later, in the ERP step, set "Trials averaged" to 1 and see whether you can spot the effect in a single trial.',
     ],
     questions: [
       'Why can you not see an ERP in a single trial of raw EEG?',
-      'Errors are rare in this task. What does that mean for how clean the error average can be?',
+      'Errors and target tones are rare. What does that mean for how clean their averages can be?',
     ],
   },
   events: {
@@ -35,7 +35,7 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
       'Naming the codes (for example 1 = standard, 2 = target) lets you average each condition separately and compare them. A difference wave (target − standard) isolates what is special about one condition.',
       'Rare conditions give fewer epochs, so their averages are noisier. That is the price of an oddball design.',
     ],
-    tryThis: ['Untick one condition and see how the later steps change.', 'In the real sample, compare stimulus-locked events with response-locked ones.'],
+    tryThis: ['Untick one condition and see how the later steps change.', 'In the flanker sample, compare stimulus-locked events with response-locked ones.'],
     questions: [
       'You have 160 standards and 40 targets. Which average will be noisier, and by roughly how much?',
       'What does it mean for an analysis to be "response-locked" instead of "stimulus-locked"?',

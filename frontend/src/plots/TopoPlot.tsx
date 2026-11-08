@@ -30,7 +30,9 @@ export function TopoPlot({ result }: { result: ProcessResult }) {
   const canDiff = available.length === 2
   const options = [...available.map((c) => c.name), ...(canDiff ? ['difference'] : [])]
   const current = target && options.includes(target) ? target : (canDiff ? 'difference' : options[0])
-  const time = cursor ?? (result.conditions.find((c) => c.peak)?.peak?.latency_s ?? (params.peak_start + params.peak_end) / 2)
+  // Until the student moves the cursor, open at the peak of whatever the map is showing.
+  const shown = current === 'difference' ? result.difference : result.conditions.find((c) => c.name === current)
+  const time = cursor ?? shown?.peak?.latency_s ?? (params.peak_start + params.peak_end) / 2
 
   // Channels × times for the chosen condition or the difference wave.
   const matrix = useMemo(() => {

@@ -1,3 +1,4 @@
+import type { SampleId } from './samples'
 import type {
   ExportResult,
   LoadResponse,
@@ -44,8 +45,8 @@ const post = <T>(path: string, body: unknown, signal?: AbortSignal) =>
   request<T>(path, { method: 'POST', body: JSON.stringify(body), signal })
 
 export const api = {
-  health: () => request<{ status: string; real_sample: boolean }>('/health'),
-  loadSample: () => post<LoadResponse>('/data/sample', {}),
+  health: () => request<{ status: string; real_sample: boolean; samples?: Partial<Record<SampleId, boolean>> }>('/health'),
+  loadSample: (sample: SampleId) => post<LoadResponse>('/data/sample', { sample }),
   upload: (files: File[]) => {
     const form = new FormData()
     files.forEach((f) => form.append('files', f))

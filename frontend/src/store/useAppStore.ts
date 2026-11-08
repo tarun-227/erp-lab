@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { defaultParams } from '@/lib/presets'
+import type { SampleId } from '@/lib/samples'
 import type { StepId } from '@/lib/steps'
 import type { LoadResponse, ProcessParams } from '@/lib/types'
 
@@ -102,6 +103,8 @@ interface AppState {
   /** Steps the student has opened, for the progress meter. */
   visited: StepId[]
   loadSource: LoadSource
+  /** The bundled recording picked in the Load step. */
+  sampleId: SampleId
   dataset: LoadResponse | null
   params: ProcessParams | null
   /** Earlier parameter sets, for undoing presets and tutor suggestions. */
@@ -127,6 +130,7 @@ interface AppState {
 
   setStep: (step: StepId) => void
   setLoadSource: (source: LoadSource) => void
+  setSampleId: (id: SampleId) => void
   setDataset: (dataset: LoadResponse) => void
   setParams: (patch: Partial<ProcessParams>) => void
   replaceParams: (next: ProcessParams) => void
@@ -155,6 +159,7 @@ export const useAppStore = create<AppState>((set) => ({
   step: 'load',
   visited: ['load'],
   loadSource: 'sample',
+  sampleId: 'flanker',
   dataset: null,
   params: null,
   history: [],
@@ -176,6 +181,7 @@ export const useAppStore = create<AppState>((set) => ({
 
   setStep: (step) => set((s) => ({ step, visited: s.visited.includes(step) ? s.visited : [...s.visited, step] })),
   setLoadSource: (loadSource) => set({ loadSource }),
+  setSampleId: (sampleId) => set({ sampleId }),
   setDataset: (dataset) =>
     set((s) => ({
       dataset,

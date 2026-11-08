@@ -15,16 +15,31 @@ from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
 
 from .core import codegen, io, pipeline, topo
-from .schemas import LoadResponse, ProcessParams, RawWindowRequest
-from .sessions import Session, store
+from .schemas import LoadResponse, ProcessParams, RawWindowRequest, SampleRequest
+from .sessions import Session, Superseded, store
 from .tutor.routes import router as tutor_router
 
 ROOT = Path(__file__).resolve().parents[2]
 SAMPLE_FILE = Path(os.environ.get("ERP_SAMPLE_FILE", ROOT / "data" / "sample_erp_raw.fif"))
-SAMPLE_DESCRIPTION = (
-    "ERP CORE Flankers task, participant 1 (Kappenman et al., 2021). Stimulus events: compatible and "
-    "incompatible flanker arrays. Response events: correct and error button presses."
-)
+# The bundled recordings, built by scripts/make_sample_data.py: three different kinds of experiment.
+SAMPLES = {
+    "flanker": (
+        SAMPLE_FILE,
+        "ERP CORE flanker task, participant 1 (Kappenman et al., 2021). Stimulus events: compatible and "
+        "incompatible flanker arrays. Response events: correct and error button presses.",
+    ),
+    "oddball": (
+        SAMPLE_FILE.parent / "sample_oddball_raw.fif",
+        "Auditory oddball task, OpenNeuro ds003061, participant 1, run 1 (Delorme, 2020), 32 of 64 channels. Stimulus "
+        "events: frequent 500 Hz tones, rare 1000 Hz target tones and rare white-noise bursts. Response events: "
+        "keypresses for the target. The eyes were closed throughout.",
+    ),
+    "ssvep": (
+        SAMPLE_FILE.parent / "sample_ssvep_raw.fif",
+        "SSVEP example data, participant 2 (Welke & Tavano). A visual stimulus flickered at 12 or 15 Hz for ten 20 s "
+        "trials each. Each trial is split here into 18 one-second segments, and each segment start is one event.",
+    ),
+}
 MAX_UPLOAD_BYTES = 300 * 1024 * 1024
 
 router = APIRouter(prefix="/api")
@@ -50,23 +65,29 @@ def _load_response(sid: str, session: Session, names: dict[str, str], descriptio
 
 @router.get("/health")
 def health() -> dict:
-    return {"status": "ok", "real_sample": SAMPLE_FILE.exists()}
+    return {
+        "status": "ok",
+        "real_sample": SAMPLE_FILE.exists(),
+        "samples": {name: path.exists() for name, (path, _) in SAMPLES.items()},
+    }
 
 
-@lru_cache(maxsize=1)
-def _sample() -> tuple[mne.io.BaseRaw, np.ndarray, dict[str, str]]:
+@lru_cache(maxsize=len(SAMPLES))
+def _sample(name: str) -> tuple[mne.io.BaseRaw, np.ndarray, dict[str, str]]:
     # Read once; sessions never modify their raw (processing works on copies), so they can share it.
-    return io.prepare(mne.io.read_raw_fif(SAMPLE_FILE, preload=True, verbose=False))
+    return io.prepare(mne.io.read_raw_fif(SAMPLES[name][0], preload=True, verbose=False))
 
 
 @router.post("/data/sample", response_model=LoadResponse)
-def load_sample() -> LoadResponse:
-    if not SAMPLE_FILE.exists():
-        raise HTTPException(404, "The bundled sample is missing. Run: python scripts/make_sample_data.py")
-    raw, events, names = _sample()
-    session = Session(raw=raw, events=events, source="sample", raw_key="sample")
+def load_sample(req: SampleRequest | None = None) -> LoadResponse:
+    name = req.sample if req else "flanker"
+    path, description = SAMPLES[name]
+    if not path.exists():
+        raise HTTPException(404, f"This sample is missing. Run: python scripts/make_sample_data.py {name}")
+    raw, events, names = _sample(name)
+    session = Session(raw=raw, events=events, source="sample", raw_key=f"sample:{name}", meta={"description": description})
     sid = store.create(session)
-    return _load_response(sid, session, names, SAMPLE_DESCRIPTION)
+    return _load_response(sid, session, names, description).model_copy(update={"sample_id": name})
 
 
 @router.post("/data/upload", response_model=LoadResponse)
@@ -117,8 +138,11 @@ def process(sid: str, params: ProcessParams) -> dict:
     session = _session(sid)
     p = params.model_dump()
     try:
-        pre = session.preprocessed(params.l_freq, params.h_freq, params.reference)
-        result = pipeline.process(pre, session.events, p)
+        with session.latest_only("process"):
+            pre = session.preprocessed(params.l_freq, params.h_freq, params.reference)
+            result = pipeline.process(pre, session.events, p)
+    except Superseded:
+        raise HTTPException(409, "A newer request replaced this one.") from None
     except ValueError as err:
         raise HTTPException(422, str(err)) from None
     session.meta["last"] = {"params": p, "result": result}
@@ -129,10 +153,13 @@ def process(sid: str, params: ProcessParams) -> dict:
 def raw_window(sid: str, req: RawWindowRequest) -> dict:
     session = _session(sid)
     try:
-        pre = session.preprocessed(req.params.l_freq, req.params.h_freq, req.params.reference)
+        with session.latest_only("raw"):
+            pre = session.preprocessed(req.params.l_freq, req.params.h_freq, req.params.reference)
+            return pipeline.raw_window(pre, req.start_s, req.duration_s)
+    except Superseded:
+        raise HTTPException(409, "A newer request replaced this one.") from None
     except ValueError as err:
         raise HTTPException(422, str(err)) from None
-    return pipeline.raw_window(pre, req.start_s, req.duration_s)
 
 
 @router.get("/sessions/{sid}/topo")

@@ -6,7 +6,7 @@ browser's local storage (so the tour shows), and open the Explain panel.
 ## 1. The problem and the data (Load, Events) – speaker 1
 
 - One sentence on what an ERP is: a few microvolts hidden in EEG ten times larger.
-- Show the tour, then load the sample recording: an ERP CORE flanker task with stimulus and response events.
+- Show the tour and the three samples, then load the flanker task from ERP CORE, with stimulus and response events.
 - Events step: correct responses vastly outnumber errors. Ask: which average will be noisier, and why?
 
 ## 2. Epoching (step 3) – speaker 2
@@ -30,6 +30,7 @@ browser's local storage (so the tour shows), and open the Explain panel.
 - Export: the script, then (optionally, in a terminal) run it on the downloaded recording and show the same
   peak values.
 - Close with the Flanker P3 preset: stimulus-locked P3 at Pz, compatible vs incompatible.
+- If time allows, load the flicker sample: the average oscillates instead of showing one peak, so count the cycles.
 
 ## Likely viva questions
 

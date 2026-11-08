@@ -16,6 +16,8 @@ export interface LoadResponse {
   suggested_event_names: Record<string, string>
   description: string
   has_positions: boolean
+  /** Which bundled recording this is; absent for uploads. */
+  sample_id?: string | null
 }
 
 export interface Condition {

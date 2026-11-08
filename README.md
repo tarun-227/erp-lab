@@ -84,13 +84,19 @@ themes. See the developer guide for details.
 | `backend/tests/` | pytest suite |
 | `frontend/src/` | React + TypeScript app (Vite, Tailwind, shadcn/ui, Plotly, Zustand, TanStack Query) |
 | `frontend/e2e/` | Playwright end-to-end test |
-| `data/sample_erp_raw.fif` | Bundled real sample (built by `scripts/make_sample_data.py`) |
+| `data/sample_*_raw.fif` | The three bundled samples: flanker, auditory oddball, SSVEP (built by `scripts/make_sample_data.py`) |
 | `run.py` | One-line run command |
 | `integration/` | Examples for merging into the course app: FastAPI mount and Streamlit embed |
 
 ## Data and credits
 
-The real sample is participant 1 of the ERP CORE flanker task: Kappenman, E. S., Farrens, J. L., Zhang, W.,
+The three bundled samples:
+
+- **Auditory oddball**: participant 1, run 1, 32 of 64 channels: Delorme, A. (2020). EEG data from an auditory oddball
+  task. OpenNeuro ds003061, doi:10.18112/openneuro.ds003061.v1.0.0 (CC0).
+- **SSVEP**: participant 2, each trial split into 1 s segments: Welke, D., & Tavano, A. SSVEP example data. OSF,
+  doi:10.17605/OSF.IO/7NE6Y (CC-BY 4.0). Distributed through MNE-Python (`mne.datasets.ssvep`).
+- **Flanker**: participant 1 of the ERP CORE flanker task: Kappenman, E. S., Farrens, J. L., Zhang, W.,
 Stewart, A. X., & Luck, S. J. (2021). ERP CORE: An open resource for human event-related potential
 research. *NeuroImage*, 225, 117465. Distributed through MNE-Python (`mne.datasets.erp_core`).
 

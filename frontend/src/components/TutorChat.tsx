@@ -18,10 +18,10 @@ import { cn } from '@/lib/utils'
 import { type TutorAction, type TutorMessage, useAppStore } from '@/store/useAppStore'
 
 const SUGGESTIONS: Record<StepId, string[]> = {
-  load: ['What is an ERP, in one paragraph?', 'What happens in the flanker task?'],
+  load: ['What is an ERP, in one paragraph?', 'What happens in this experiment?'],
   events: ['Why do rare targets give a noisier average?', 'Which conditions should I compare?'],
   epoching: ['Why were these epochs rejected?', 'Is my rejection threshold sensible?', 'What does the high-pass filter do here?'],
-  erp: ['Is my ERN real or noise?', 'Why is the difference wave largest there?', 'How many trials do I really need?'],
+  erp: ['Is this effect real or noise?', 'Why is the difference wave largest there?', 'How many trials do I really need?'],
   learn: ['Quiz me on baseline correction', 'Explain 1/√N with my numbers'],
   export: ['What does each line of the script do?', 'How would I report these results?'],
 }

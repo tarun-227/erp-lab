@@ -5,6 +5,8 @@ from __future__ import annotations
 import threading
 import uuid
 from collections import OrderedDict
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 
 import mne
@@ -47,6 +49,10 @@ class PreprocessCache:
 preprocess_cache = PreprocessCache()
 
 
+class Superseded(Exception):
+    """A newer request of the same kind arrived while this one was waiting its turn."""
+
+
 @dataclass
 class Session:
     raw: mne.io.BaseRaw
@@ -55,6 +61,24 @@ class Session:
     meta: dict = field(default_factory=dict)
     raw_key: str = field(default_factory=lambda: uuid.uuid4().hex)
     """Identifies the recording in the shared cache; sessions on the same recording share it."""
+    _tickets: dict[str, int] = field(default_factory=dict, repr=False)
+    _ticket_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    _turns: dict[str, threading.Lock] = field(default_factory=dict, repr=False)
+
+    @contextmanager
+    def latest_only(self, kind: str) -> Iterator[None]:
+        """Run requests of one kind one at a time, skipping any that a newer request has replaced.
+
+        A browser abandons its old request whenever a slider moves, but the server cannot see that.
+        Without this, abandoned work piles up and the plots lag far behind the sliders.
+        """
+        with self._ticket_lock:
+            ticket = self._tickets[kind] = self._tickets.get(kind, 0) + 1
+            turn = self._turns.setdefault(kind, threading.Lock())
+        with turn:
+            if ticket != self._tickets[kind]:
+                raise Superseded
+            yield
 
     def preprocessed(self, l_freq: float | None, h_freq: float | None, reference: str) -> mne.io.BaseRaw:
         """Filtered and re-referenced copy, cached because sliders re-request the same settings often."""
