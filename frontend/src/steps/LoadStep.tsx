@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   ActivityIcon,
-  ArrowLeftIcon,
   ArrowRightIcon,
   ClockIcon,
   DatabaseIcon,
@@ -229,7 +228,6 @@ export function LoadMain() {
       <StepHeader
         id="load"
         title="Welcome! Let's find a brain response"
-        text="An event-related potential (ERP) is a tiny voltage change the brain makes after an event, hidden in much larger EEG. In six short steps you'll dig it out yourself."
       />
 
       {!dataset && <JourneyDiagram />}
@@ -269,8 +267,8 @@ export function LoadMain() {
         </div>
         {!dataset && (
           <p className="text-muted-foreground flex items-center gap-2 text-[15px]">
-            <ArrowLeftIcon className="text-primary size-4 shrink-0" aria-hidden />
-            Then press the load button in the panel on the left.
+            Then press the load button in the panel on the right.
+            <ArrowRightIcon className="text-primary size-4 shrink-0" aria-hidden />
           </p>
         )}
       </section>

@@ -5,9 +5,8 @@ const KEY = 'erp-lab-tour-done'
 
 const STOPS = [
   { target: 'steps', title: 'Your lesson path', text: 'Six short steps, left to right: load data, pick events, cut epochs, average them, test yourself, then export. Keys 1–6 jump between steps.' },
-  { target: 'panel', title: 'Controls', text: 'Every setting for the current step lives here. Each ⓘ explains what a setting does, in plain words.' },
   { target: 'main', title: 'Live, linked plots', text: 'Plots update as you move a slider. Click a trial or a moment in time and the other plots follow.' },
-  { target: 'drawer-toggle', title: 'Guide and Tutor', text: 'Open the Guide for background and ideas to try at every step, and the Tutor to ask questions about your own results.' },
+  { target: 'panel', title: 'Controls, Guide and Tutor', text: 'The Controls tab holds every setting for the current step; each ⓘ explains one in plain words. Switch to Guide for background and ideas to try, or Tutor to ask about your own results.' },
 ]
 
 function seen(): boolean {
@@ -18,7 +17,7 @@ function seen(): boolean {
   }
 }
 
-/** A four-stop first-visit tour; never shown again once finished or skipped. */
+/** A three-stop first-visit tour; never shown again once finished or skipped. */
 export function Tour() {
   const [index, setIndex] = useState<number | null>(null)
   const [rect, setRect] = useState<DOMRect | null>(null)

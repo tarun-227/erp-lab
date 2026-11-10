@@ -10,14 +10,13 @@ out the main areas; you can skip it.
 
 | Area | What it holds |
 |---|---|
-| Top bar | The six steps (keys **1–6** jump between them), the light/dark toggle, and the book icon that opens the side panel |
-| Left panel | The controls for the current step. Hover any ⓘ for a short explanation. Drag its right edge to resize it (or focus the edge and use ← / →, Shift for bigger steps; double-click resets), and collapse it to a slim rail with the panel button or the **[** key. Its width is remembered |
-| Centre | The plots for the current step |
-| Right panel | **Explain**: background, "Try this" ideas and questions for the current step. **Tutor**: the AI tutor (optional) |
+| Top bar | The six steps (keys **1–6** jump between them), the light/dark toggle, and the book icon that opens the Guide tab |
+| Main area (left) | The plots for the current step |
+| Side panel (right) | Three tabs, one shown at a time so the plots keep most of the width: **Controls** (the settings for the current step; hover any ⓘ for a short explanation), **Guide** (background, "Try this" ideas and questions) and **Tutor** (the AI tutor, optional). Drag its left edge to resize it (or focus the edge and use ← / →, Shift for bigger steps; double-click resets), and collapse it to a slim rail with the panel button or the **[** key; the rail's icons reopen any tab. Its width is remembered. The Export step has no settings, so it shows Guide and Tutor only |
 
 Every plot has an **Explain this plot** button (asks the tutor about that plot), an **Enlarge** button that
 opens it almost full-screen (Esc or Close returns it), and Plotly's toolbar (zoom, pan, and the camera icon
-to save a PNG). For the biggest plots, collapse the left panel and close the Guide.
+to save a PNG). For the biggest plots, collapse the side panel.
 
 ## 1. Load data
 
@@ -98,14 +97,14 @@ A notification appears whenever a change alters how many epochs are kept.
   reference, as the Keil et al. (2014) publication checklist asks.
 - **Why averaging works**: the noise left after averaging N trials, against the 1/√N prediction.
 
-In the left panel, **Component** buttons set a typical window (N1, P300, ERN, and Pe, the error positivity after the ERN) and **Trials
+In the Controls tab, **Component** buttons set a typical window (N1, P300, ERN, and Pe, the error positivity after the ERN) and **Trials
 averaged** uses only the first N kept trials of each condition. Slide it from 1 upwards to watch the ERP
 emerge from the noise.
 
 ## 5. Learn & Quiz
 
 - Six concept cards (click to expand).
-- **Try this** experiments in the left panel: each changes the settings for you and opens the plot that
+- **Try this** experiments in the Controls tab: each changes the settings for you and opens the plot that
   shows the effect. Undo puts the settings back.
 - An eight-question quiz with instant feedback. Your answers are remembered in this browser.
 - With the tutor enabled: questions generated from your own results, and feedback on a short written answer.

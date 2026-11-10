@@ -92,7 +92,6 @@ export function ExportMain() {
       <StepHeader
         id="export"
         title="Take the pipeline with you"
-        text="Everything you set up here can be reproduced outside the app: a Python script with your exact parameters, the recording it runs on, and the results."
       />
 
       <div className="grid gap-4 @xl:grid-cols-2 @5xl:grid-cols-4">

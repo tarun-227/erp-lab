@@ -90,8 +90,7 @@ export function useTutor() {
   const explainPlot = useCallback(
     (id: PlotId, title: string) => {
       const s = useAppStore.getState()
-      s.toggleDrawer(true)
-      s.setDrawerTab('tutor')
+      s.openPanel('tutor')
       void send(`Explain the "${title}" plot using my results.`, { id, title })
     },
     [send],

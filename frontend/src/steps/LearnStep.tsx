@@ -198,7 +198,6 @@ export function LearnMain() {
       <StepHeader
         id="learn"
         title="Check your understanding"
-        text="Six ideas behind every ERP analysis, experiments that show each one on your own data, and a short quiz."
       />
 
       <section aria-labelledby="concepts-title" className="space-y-4">
@@ -270,7 +269,7 @@ export function LearnMain() {
               <p className="text-[15px]">
                 {score === QUIZ.length
                   ? 'A perfect score. You know your epochs from your ERPs.'
-                  : 'Nice work. Re-read the explanations for the ones you missed, then try the experiments on the left.'}
+                  : 'Nice work. Re-read the explanations for the ones you missed, then try the experiments on the right.'}
               </p>
             </div>
           </div>

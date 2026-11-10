@@ -131,7 +131,6 @@ export function EventsMain() {
       <StepHeader
         id="events"
         title="Events and conditions"
-        text="Each event marks a stimulus or response. Its code says which condition it belongs to. Choose which codes to analyse and name them; the next steps average each condition separately."
       />
       <PlotCard
         id="events"

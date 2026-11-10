@@ -4,7 +4,8 @@ import type { SampleId } from '@/lib/samples'
 import type { StepId } from '@/lib/steps'
 import type { LoadResponse, ProcessParams } from '@/lib/types'
 
-type DrawerTab = 'explain' | 'tutor'
+/** Tabs of the side panel: the step's settings, the Guide and the Tutor. */
+export type PanelTab = 'controls' | 'explain' | 'tutor'
 export type LoadSource = 'sample' | 'upload'
 export type PlotId = 'raw' | 'erp_image' | 'erp' | 'topomap' | 'events' | 'drop' | 'noise' | 'r2'
 
@@ -73,9 +74,9 @@ function saveQuiz(answers: Record<number, number>) {
 }
 
 const PANEL_KEY = 'erp-lab-panel'
-export const PANEL_MIN = 260
-export const PANEL_MAX = 560
-const PANEL_DEFAULT = 340
+export const PANEL_MIN = 320
+export const PANEL_MAX = 600
+export const PANEL_DEFAULT = 380
 
 function loadPanel(): { width: number; collapsed: boolean } {
   try {
@@ -94,9 +95,6 @@ function savePanel(width: number, collapsed: boolean) {
     /* storage unavailable: the panel just resets next visit */
   }
 }
-
-// The drawer sits beside the content on wide screens and over it on narrow ones, so start it closed there.
-const wideScreen = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches
 
 interface AppState {
   step: StepId
@@ -118,9 +116,8 @@ interface AppState {
   trialsN: number | null
   topoTarget: string | null
   rawStart: number
-  drawerOpen: boolean
-  drawerTab: DrawerTab
-  /** Left controls panel: width in px, and whether it is collapsed to a rail. Remembered per browser. */
+  panelTab: PanelTab
+  /** Side panel (Controls, Guide, Tutor): width in px, and whether it is collapsed to a rail. Remembered per browser. */
   panelWidth: number
   panelCollapsed: boolean
   tutorMessages: TutorMessage[]
@@ -143,10 +140,11 @@ interface AppState {
   setTrialsN: (n: number | null) => void
   setTopoTarget: (t: string | null) => void
   setRawStart: (s: number) => void
-  toggleDrawer: (open?: boolean) => void
+  /** Open the side panel on one tab. */
+  openPanel: (tab: PanelTab) => void
   setPanelWidth: (width: number) => void
   togglePanel: (collapsed?: boolean) => void
-  setDrawerTab: (tab: DrawerTab) => void
+  setPanelTab: (tab: PanelTab) => void
   setSocratic: (on: boolean) => void
   pushTutorMessage: (m: TutorMessage) => void
   updateTutorMessage: (id: string, update: (m: TutorMessage) => TutorMessage) => void
@@ -171,10 +169,9 @@ export const useAppStore = create<AppState>((set) => ({
   trialsN: null,
   topoTarget: null,
   rawStart: 0,
-  drawerOpen: wideScreen(),
   panelWidth: loadPanel().width,
   panelCollapsed: loadPanel().collapsed,
-  drawerTab: 'explain',
+  panelTab: 'controls',
   tutorMessages: [],
   socratic: true,
   quizAnswers: loadQuiz(),
@@ -209,7 +206,11 @@ export const useAppStore = create<AppState>((set) => ({
   setTrialsN: (trialsN) => set({ trialsN }),
   setTopoTarget: (topoTarget) => set({ topoTarget }),
   setRawStart: (rawStart) => set({ rawStart: Math.max(0, rawStart) }),
-  toggleDrawer: (open) => set((s) => ({ drawerOpen: open ?? !s.drawerOpen })),
+  openPanel: (panelTab) =>
+    set((s) => {
+      savePanel(s.panelWidth, false)
+      return { panelTab, panelCollapsed: false }
+    }),
   setPanelWidth: (width) =>
     set((s) => {
       const panelWidth = Math.round(Math.min(PANEL_MAX, Math.max(PANEL_MIN, width)))
@@ -222,7 +223,7 @@ export const useAppStore = create<AppState>((set) => ({
       savePanel(s.panelWidth, panelCollapsed)
       return { panelCollapsed }
     }),
-  setDrawerTab: (drawerTab) => set({ drawerTab }),
+  setPanelTab: (panelTab) => set({ panelTab }),
   setSocratic: (socratic) => set({ socratic }),
   pushTutorMessage: (m) => set((s) => ({ tutorMessages: [...s.tutorMessages, m] })),
   updateTutorMessage: (id, update) =>

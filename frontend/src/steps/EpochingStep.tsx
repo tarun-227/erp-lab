@@ -136,7 +136,6 @@ export function EpochingMain() {
       <StepHeader
         id="epoching"
         title="Cut the signal into epochs"
-        text="An epoch is a short window of EEG around one event. Set the window, filter and rejection threshold on the left; the plots update as you move the sliders."
         aside={<ProcessStatus isFetching={isFetching} error={error} />}
       />
       {data ? (

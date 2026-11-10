@@ -175,7 +175,6 @@ export function ErpMain() {
       <StepHeader
         id="erp"
         title="Average epochs into ERPs"
-        text="Averaging keeps activity that is time-locked to the event and cancels the rest. Compare conditions, find the peak, and see where on the scalp it is largest."
         aside={<ProcessStatus isFetching={isFetching} error={error} />}
       />
       {data && erp ? (

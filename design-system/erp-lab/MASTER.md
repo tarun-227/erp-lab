@@ -85,15 +85,17 @@ Nunito only for headings (rounded terminals are the friendly signal); never belo
 - Radius: controls 12 px, cards 20 px, pills full.
 - Elevation (one scale only): `--shadow-soft` for cards, `--shadow-clay` for raised controls and the active
   step, `--shadow-pop` for popovers and the tour.
-- Z-index: content 0, sticky header 40, drawer 30 (overlay on narrow screens), toasts/tour 50.
+- Z-index: content 0, sticky header 40, toasts/tour 50. The side panel sits beside the plots (above them on narrow screens), never over them.
 
 ## Components
 
 - **Step path** (top bar): six labelled steps with icons, done = green check, current = filled indigo,
   locked = lock icon + tooltip explaining why. Keys 1–6 still work. A progress meter shows steps visited
   and quiz score.
-- **Step header**: icon chip, title, one-line purpose, and a "You'll learn" list (2–3 objectives).
-- **Controls panel**: grouped sections with titles; every control has a visible label, a value read-out in
+- **Step header**: icon chip, title, and a "You'll learn" list (2–3 objectives).
+- **Side panel** (right of the plots): tabs for Controls, Guide and Tutor, one visible at a time; resizable, and
+  collapsible to a rail of three icons.
+- **Controls tab**: grouped sections with titles; every control has a visible label, a value read-out in
   DM Mono, and an ⓘ tooltip. Slider thumbs 20 px, tracks 6 px.
 - **Buttons**: one primary per screen ("Continue to …"); secondary = outline; heights 36–44 px.
 - **Cards**: white, 20 px radius, soft shadow; plot cards flat inside.

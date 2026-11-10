@@ -1,23 +1,39 @@
-import { PanelLeftCloseIcon, PanelLeftOpenIcon, SlidersHorizontalIcon } from 'lucide-react'
+import { BookOpenIcon, PanelRightCloseIcon, SlidersHorizontalIcon, SparklesIcon } from 'lucide-react'
 import { type KeyboardEvent, type PointerEvent, type ReactNode, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { PANEL_MAX, PANEL_MIN, useAppStore } from '@/store/useAppStore'
+import { PANEL_DEFAULT, PANEL_MAX, PANEL_MIN, type PanelTab, useAppStore } from '@/store/useAppStore'
+import { GuideContent } from './GuideContent'
+import { TutorChat } from './TutorChat'
 
-const PANEL_ID = 'controls-panel'
+const PANEL_ID = 'side-panel'
+
+const TABS: { id: PanelTab; label: string; icon: typeof BookOpenIcon }[] = [
+  { id: 'controls', label: 'Controls', icon: SlidersHorizontalIcon },
+  { id: 'explain', label: 'Guide', icon: BookOpenIcon },
+  { id: 'tutor', label: 'Tutor', icon: SparklesIcon },
+]
 
 /**
- * The left controls panel. Drag its right edge (or focus the edge and use the arrow keys) to resize it;
- * collapse it to a slim rail to give the plots more room. Width and state are remembered.
+ * One panel to the right of the plots, with three tabs: the step's Controls, the Guide and the Tutor. Only one
+ * shows at a time, so the plots keep most of the width. Drag its left edge (or focus the edge and use the arrow
+ * keys) to resize it; collapse it to a slim rail. Width and state are remembered. On narrow screens it sits
+ * above the plots instead. Steps without settings (Export) have no Controls tab.
  */
-export function SidePanel({ children }: { children: ReactNode }) {
+export function SidePanel({ controls }: { controls?: ReactNode }) {
   const width = useAppStore((s) => s.panelWidth)
   const collapsed = useAppStore((s) => s.panelCollapsed)
+  const stored = useAppStore((s) => s.panelTab)
   const setWidth = useAppStore((s) => s.setPanelWidth)
   const toggle = useAppStore((s) => s.togglePanel)
+  const setTab = useAppStore((s) => s.setPanelTab)
+  const openPanel = useAppStore((s) => s.openPanel)
   const [dragging, setDragging] = useState(false)
   const drag = useRef<{ x: number; width: number } | null>(null)
+  const tabs = TABS.filter((t) => t.id !== 'controls' || controls)
+  const tab = !controls && stored === 'controls' ? 'explain' : stored
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -27,7 +43,7 @@ export function SidePanel({ children }: { children: ReactNode }) {
     document.body.style.userSelect = 'none'
   }
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (drag.current) setWidth(drag.current.width + e.clientX - drag.current.x)
+    if (drag.current) setWidth(drag.current.width - (e.clientX - drag.current.x))
   }
   const endDrag = (e: PointerEvent<HTMLDivElement>) => {
     if (!drag.current) return
@@ -39,8 +55,8 @@ export function SidePanel({ children }: { children: ReactNode }) {
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.shiftKey ? 64 : 16
     const keys: Record<string, () => void> = {
-      ArrowLeft: () => setWidth(width - step),
-      ArrowRight: () => setWidth(width + step),
+      ArrowLeft: () => setWidth(width + step),
+      ArrowRight: () => setWidth(width - step),
       Home: () => setWidth(PANEL_MIN),
       End: () => setWidth(PANEL_MAX),
       Enter: () => toggle(true),
@@ -55,35 +71,29 @@ export function SidePanel({ children }: { children: ReactNode }) {
   if (collapsed) {
     return (
       <aside
-        aria-label="Controls (collapsed)"
+        aria-label="Side panel (collapsed)"
         data-tour="panel"
-        className="bg-card flex shrink-0 items-center gap-3 border-b px-4 py-2 md:w-14 md:flex-col md:border-r md:border-b-0 md:px-0 md:py-4"
+        className="bg-card flex shrink-0 items-center gap-2 border-b px-4 py-2 max-md:order-first md:w-14 md:flex-col md:border-b-0 md:border-l md:px-0 md:py-4"
       >
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label="Show the controls panel"
-                aria-expanded={false}
-                aria-controls={PANEL_ID}
-                onClick={() => toggle(false)}
-              />
-            }
-          >
-            <PanelLeftOpenIcon />
-          </TooltipTrigger>
-          <TooltipContent side="right">Show controls ( [ )</TooltipContent>
-        </Tooltip>
-        <button
-          type="button"
-          onClick={() => toggle(false)}
-          className="text-muted-foreground hover:text-primary flex items-center gap-2 text-sm font-medium transition-colors md:mt-2 md:flex-col"
-        >
-          <SlidersHorizontalIcon className="size-4" aria-hidden />
-          <span className="md:[writing-mode:vertical-rl]">Controls</span>
-        </button>
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <Tooltip key={id}>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={id === tab ? 'secondary' : 'ghost'}
+                  size="icon"
+                  aria-label={`Open ${label}`}
+                  aria-expanded={false}
+                  aria-controls={PANEL_ID}
+                  onClick={() => openPanel(id)}
+                />
+              }
+            >
+              <Icon />
+            </TooltipTrigger>
+            <TooltipContent side="left">{label} ( [ )</TooltipContent>
+          </Tooltip>
+        ))}
       </aside>
     )
   }
@@ -91,40 +101,57 @@ export function SidePanel({ children }: { children: ReactNode }) {
   return (
     <aside
       id={PANEL_ID}
-      aria-label="Controls"
+      aria-label="Controls, guide and tutor"
       data-tour="panel"
       style={{ '--panel-w': `${width}px` } as React.CSSProperties}
-      className="bg-card relative flex max-h-[45vh] shrink-0 flex-col border-b md:max-h-none md:w-[var(--panel-w)] md:border-r md:border-b-0"
+      className="bg-card relative flex max-h-[45vh] shrink-0 flex-col border-b max-md:order-first md:max-h-none md:w-[var(--panel-w)] md:border-b-0 md:border-l"
     >
-      <div className="flex items-center justify-between gap-2 border-b px-5 py-2.5 lg:px-6">
-        <span className="text-muted-foreground flex items-center gap-2 text-sm font-semibold">
-          <SlidersHorizontalIcon className="size-4" aria-hidden /> Controls
-        </span>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Collapse the controls panel"
-                aria-expanded
-                aria-controls={PANEL_ID}
-                onClick={() => toggle(true)}
-              />
-            }
-          >
-            <PanelLeftCloseIcon />
-          </TooltipTrigger>
-          <TooltipContent side="right">Collapse controls ( [ )</TooltipContent>
-        </Tooltip>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-5 lg:p-6">{children}</div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as PanelTab)} className="flex min-h-0 flex-1 flex-col gap-0">
+        <div className="flex items-center gap-2 border-b p-3">
+          <TabsList className="flex-1">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <TabsTrigger key={id} value={id}>
+                <Icon /> {label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Collapse the side panel"
+                  aria-expanded
+                  aria-controls={PANEL_ID}
+                  onClick={() => toggle(true)}
+                />
+              }
+            >
+              <PanelRightCloseIcon />
+            </TooltipTrigger>
+            <TooltipContent side="left">Collapse ( [ )</TooltipContent>
+          </Tooltip>
+        </div>
+
+        {controls && (
+          <TabsContent value="controls" className="min-h-0 flex-1 overflow-y-auto p-5 lg:p-6">
+            {controls}
+          </TabsContent>
+        )}
+        <TabsContent value="explain" className="min-h-0 flex-1 overflow-y-auto p-5">
+          <GuideContent />
+        </TabsContent>
+        <TabsContent value="tutor" className="flex min-h-0 flex-1 flex-col">
+          <TutorChat />
+        </TabsContent>
+      </Tabs>
 
       {/* Resize handle: pointer drag, or arrow keys when focused (Shift for bigger steps, Enter collapses). */}
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize the controls panel"
+        aria-label="Resize the side panel"
         aria-controls={PANEL_ID}
         aria-valuenow={width}
         aria-valuemin={PANEL_MIN}
@@ -134,10 +161,10 @@ export function SidePanel({ children }: { children: ReactNode }) {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onDoubleClick={() => setWidth(340)}
+        onDoubleClick={() => setWidth(PANEL_DEFAULT)}
         onKeyDown={onKeyDown}
         title="Drag to resize · double-click to reset"
-        className="group absolute inset-y-0 -right-2 z-20 hidden w-4 cursor-col-resize touch-none focus-visible:outline-none md:block"
+        className="group absolute inset-y-0 -left-2 z-20 hidden w-4 cursor-col-resize touch-none focus-visible:outline-none md:block"
       >
         <span
           aria-hidden

@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { ExplainDrawer } from '@/components/ExplainDrawer'
 import { SidePanel } from '@/components/SidePanel'
 import { TopBar } from '@/components/TopBar'
 import { Tour } from '@/components/Tour'
@@ -89,7 +88,6 @@ function useFocusOnStepChange(step: StepId) {
 export default function App() {
   const step = useAppStore((s) => s.step)
   const hasData = useAppStore((s) => s.dataset !== null && s.params !== null)
-  const drawerOpen = useAppStore((s) => s.drawerOpen)
   useShortcuts()
   useSharedParams()
   useFocusOnStepChange(step)
@@ -102,15 +100,10 @@ export default function App() {
       </a>
       <TopBar />
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        {Panel && (
-          <SidePanel>
-            <Panel />
-          </SidePanel>
-        )}
         <main id="main" data-tour="main" className="@container min-w-0 flex-1 overflow-y-auto px-5 py-6 [scrollbar-gutter:stable] lg:px-10 lg:py-8">
           <Main />
         </main>
-        {drawerOpen && <ExplainDrawer />}
+        <SidePanel controls={Panel ? <Panel /> : undefined} />
       </div>
       <Tour />
     </div>

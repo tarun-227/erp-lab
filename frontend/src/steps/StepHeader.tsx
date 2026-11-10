@@ -4,8 +4,8 @@ import { EXPLAIN } from '@/content/explain'
 import { STEPS, STEP_ICONS, type StepId } from '@/lib/steps'
 import { cn } from '@/lib/utils'
 
-/** Step title with its icon, a one-line purpose, and what the student will learn here. */
-export function StepHeader({ id, title, text, aside }: { id: StepId; title: string; text: string; aside?: ReactNode }) {
+/** Step title with its icon and what the student will learn here. */
+export function StepHeader({ id, title, aside }: { id: StepId; title: string; aside?: ReactNode }) {
   const index = STEPS.findIndex((s) => s.id === id)
   const Icon = STEP_ICONS[id]
   const objectives = EXPLAIN[id].objectives
@@ -22,7 +22,6 @@ export function StepHeader({ id, title, text, aside }: { id: StepId; title: stri
             <h1 tabIndex={-1} data-step-title className="mt-0.5 text-[30px] leading-9 font-extrabold tracking-tight outline-none">
               {title}
             </h1>
-            <p className="text-muted-foreground mt-1.5 max-w-[68ch] text-base">{text}</p>
           </div>
         </div>
         {aside}

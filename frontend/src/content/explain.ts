@@ -86,7 +86,7 @@ export const EXPLAIN: Record<StepId, ExplainEntry> = {
     objectives: ['Connect each idea to what you saw in the plots', 'Test yourself with the quiz'],
     title: 'Check your understanding',
     body: [
-      'Open the concept cards for a short recap of each idea. The "Try this" experiments on the left change the settings for you and take you to the plot that shows the effect.',
+      'Open the concept cards for a short recap of each idea. The "Try this" experiments on the right change the settings for you and take you to the plot that shows the effect.',
       'The quiz checks the key ideas; if the AI tutor is enabled, it can also write questions about your own results and give feedback on a short written answer.',
     ],
   },

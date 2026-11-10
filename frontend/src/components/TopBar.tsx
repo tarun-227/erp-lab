@@ -44,8 +44,9 @@ function ProgressRing() {
 
 export function TopBar() {
   const { resolvedTheme, setTheme } = useTheme()
-  const drawerOpen = useAppStore((s) => s.drawerOpen)
-  const toggleDrawer = useAppStore((s) => s.toggleDrawer)
+  const guideOpen = useAppStore((s) => !s.panelCollapsed && s.panelTab === 'explain')
+  const openPanel = useAppStore((s) => s.openPanel)
+  const togglePanel = useAppStore((s) => s.togglePanel)
   const dark = resolvedTheme === 'dark'
 
   return (
@@ -80,11 +81,10 @@ export function TopBar() {
           <TooltipContent side="bottom">{dark ? 'Light theme' : 'Dark theme'}</TooltipContent>
         </Tooltip>
         <Button
-          data-tour="drawer-toggle"
-          variant={drawerOpen ? 'secondary' : 'outline'}
-          aria-pressed={drawerOpen}
-          aria-label={drawerOpen ? 'Hide the guide and tutor panel' : 'Show the guide and tutor panel'}
-          onClick={() => toggleDrawer()}
+          variant={guideOpen ? 'secondary' : 'outline'}
+          aria-pressed={guideOpen}
+          aria-label={guideOpen ? 'Hide the guide' : 'Show the guide'}
+          onClick={() => (guideOpen ? togglePanel(true) : openPanel('explain'))}
         >
           <BookOpenIcon /> <span className="hidden sm:inline">Guide</span>
         </Button>
