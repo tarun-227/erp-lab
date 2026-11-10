@@ -10,7 +10,8 @@ const runPy = `"${resolve(import.meta.dirname, '..', 'run.py')}"`
 export default defineConfig({
   testDir: './e2e',
   timeout: 120_000,
-  expect: { timeout: 20_000 },
+  // The first ERP after the server starts filters a 15-minute recording (about 6 s, longer on a busy machine).
+  expect: { timeout: 45_000 },
   use: {
     baseURL: 'http://127.0.0.1:8123',
     channel: process.env.CI ? undefined : (process.env.PW_CHANNEL ?? 'msedge'),

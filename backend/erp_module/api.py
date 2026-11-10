@@ -9,7 +9,7 @@ from pathlib import Path
 
 import mne
 import numpy as np
-from fastapi import APIRouter, FastAPI, File, HTTPException, UploadFile
+from fastapi import APIRouter, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.background import BackgroundTask
@@ -212,6 +212,17 @@ def create_app(frontend_dist: Path | None = None) -> FastAPI:
     dist = frontend_dist or _frontend_dist()
     if dist.is_dir():
         app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+
+    @app.middleware("http")
+    async def revalidate_pages(request: Request, call_next):
+        # Built assets have content hashes in their names and can be cached; the page that names them must not
+        # be, or a browser keeps showing the previous version of the app after an update.
+        response = await call_next(request)
+        path = request.url.path
+        if "/api/" not in path and "/assets/" not in path:
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
     return app
 
 
