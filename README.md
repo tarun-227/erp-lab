@@ -60,9 +60,9 @@ cd frontend && npm test
 cd frontend && npx playwright test
 ```
 
-38 backend tests (pytest), 15 frontend unit tests (Vitest), and Playwright end-to-end tests: a run through
-all six steps plus an automated accessibility check (axe, WCAG 2.2 AA) of every step in light and dark
-themes. See the developer guide for details.
+94 backend tests (pytest), 21 frontend unit tests (Vitest), and 6 Playwright end-to-end tests: a run through
+all six steps, a load of each sample, and an automated accessibility check (axe, WCAG 2.2 AA) of every step
+in light and dark themes. See the developer guide for details.
 
 ## Documentation
 
