@@ -18,11 +18,14 @@ from ..sessions import Session, store
 from . import client as llm
 from . import prompts
 from .context import build_context
-from .tools import TOOLS, to_event
+from .tools import TOOLS, proposal_in_text, to_event
 
 router = APIRouter(prefix="/api/tutor")
 
 MAX_HISTORY = 8
+# Room for the reply. Gemini 2.5 "thinks" before answering and that counts against this limit, so a tight limit
+# cut answers off mid-sentence; the prompt keeps the visible answer short.
+MAX_TOKENS = 2048
 RATE_LIMIT = 12  # requests per minute per session
 _calls: dict[str, deque] = {}
 _cache: OrderedDict[str, list[tuple[str, dict]]] = OrderedDict()
@@ -101,6 +104,9 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+OFFLINE = "Tutor offline: add a free GEMINI_API_KEY or GROQ_API_KEY to .env to enable it."
+
+
 def _busy_message() -> dict:
     return {"kind": "busy", "message": "The tutor is busy (free-tier limit). Try again in a minute."}
 
@@ -129,68 +135,81 @@ def _chat_messages(req: ChatRequest, session: Session | None, provider: llm.Prov
 
 
 def _stream_chat(req: ChatRequest, session: Session | None) -> Iterator[str]:
-    provider = llm.route(has_image=bool(req.plot and req.plot.png_base64))
-    if provider is None:
-        yield _sse("error", {"kind": "offline", "message": "Tutor offline: add a free GROQ_API_KEY to .env to enable it."})
+    candidates = llm.providers()
+    if not candidates:
+        yield _sse("error", {"kind": "offline", "message": OFFLINE})
         yield _sse("done", {})
         return
-
-    messages = _chat_messages(req, session, provider)
-    key = hashlib.sha256(json.dumps([provider.name, messages], sort_keys=True).encode()).hexdigest()
-    with _lock:
-        cached = _cache.get(key)
-    if cached:
-        for event, data in cached:
-            yield _sse(event, data)
-        yield _sse("done", {"cached": True})
-        return
-
     if not _allow(req.session_id or "anonymous"):
         yield _sse("error", _busy_message())
         yield _sse("done", {})
         return
 
     current_params = session.meta.get("last", {}).get("params") if session else None
-    emitted: list[tuple[str, dict]] = []
-    calls: dict[int, dict] = {}
-    try:
-        stream = llm.make_client(provider).chat.completions.create(
-            model=provider.model, messages=messages, tools=TOOLS, tool_choice="auto",
-            stream=True, temperature=0.3, max_tokens=700,
-        )
-        for chunk in stream:
-            if not chunk.choices:
-                continue
-            delta = chunk.choices[0].delta
-            if delta.content:
-                emitted.append(("delta", {"text": delta.content}))
-                yield _sse("delta", {"text": delta.content})
-            for tc in delta.tool_calls or []:
-                slot = calls.setdefault(tc.index, {"name": "", "arguments": ""})
-                if tc.function and tc.function.name:
-                    slot["name"] = tc.function.name
-                if tc.function and tc.function.arguments:
-                    slot["arguments"] += tc.function.arguments
-    except openai.RateLimitError:
-        yield _sse("error", _busy_message())
-        yield _sse("done", {})
-        return
-    except openai.APIError as err:
-        yield _sse("error", {"kind": "error", "message": f"The tutor could not answer ({provider.name}): {err.message}"})
-        yield _sse("done", {})
-        return
+    for n, provider in enumerate(candidates):
+        backup_left = n < len(candidates) - 1
+        messages = _chat_messages(req, session, provider)
+        key = hashlib.sha256(json.dumps([provider.name, messages], sort_keys=True).encode()).hexdigest()
+        with _lock:
+            cached = _cache.get(key)
+        if cached:
+            for event, data in cached:
+                yield _sse(event, data)
+            yield _sse("done", {"cached": True, "provider": provider.name})
+            return
 
-    for call in calls.values():
-        event = to_event(call["name"], call["arguments"], current_params)
-        if event:
+        emitted: list[tuple[str, dict]] = []
+        calls: dict[int, dict] = {}
+        try:
+            stream = llm.make_client(provider, max_retries=1 if backup_left else 3).chat.completions.create(
+                model=provider.model, messages=messages, tools=TOOLS, tool_choice="auto",
+                stream=True, temperature=0.3, max_tokens=MAX_TOKENS,
+            )
+            for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    emitted.append(("delta", {"text": delta.content}))
+                    yield _sse("delta", {"text": delta.content})
+                for tc in delta.tool_calls or []:
+                    slot = calls.setdefault(tc.index, {"name": "", "arguments": ""})
+                    if tc.function and tc.function.name:
+                        slot["name"] = tc.function.name
+                    if tc.function and tc.function.arguments:
+                        slot["arguments"] += tc.function.arguments
+        except openai.APIError as err:
+            if backup_left and not emitted:
+                continue  # nothing shown yet: hand the question to the backup provider
+            if isinstance(err, openai.RateLimitError):
+                yield _sse("error", _busy_message())
+            else:
+                yield _sse("error", {"kind": "error", "message": f"The tutor could not answer ({provider.name}): {err.message}"})
+            yield _sse("done", {})
+            return
+
+        if not any(call["name"] == "propose_params" for call in calls.values()):
+            reply = "".join(data["text"] for event, data in emitted if event == "delta")
+            if written := proposal_in_text(reply):
+                calls[len(calls)] = {"name": "propose_params", "arguments": written}
+        events = [e for e in (to_event(c["name"], c["arguments"], current_params) for c in calls.values()) if e]
+        if events and not any(event == "delta" for event, _ in emitted):
+            # Some models reply with only a tool call; give it a line of text so it is not left bare.
+            card = any(event == "action" for event, _ in events)
+            lead = ("delta", {"text": "Here is an experiment to try. Apply it, then look at what changes:"
+                              if card else "Look at the highlighted part of the plot."})
+            emitted.append(lead)
+            yield _sse(*lead)
+        for event in events:
             emitted.append(event)
             yield _sse(*event)
 
-    with _lock:
-        _cache[key] = emitted
-        while len(_cache) > 50:
-            _cache.popitem(last=False)
-    yield _sse("done", {"provider": provider.name})
+        with _lock:
+            _cache[key] = emitted
+            while len(_cache) > 50:
+                _cache.popitem(last=False)
+        yield _sse("done", {"provider": provider.name})
+        return
 
 
 @router.post("/chat")
@@ -204,21 +223,26 @@ def chat(req: ChatRequest) -> StreamingResponse:
 
 
 def _json_call(system: str, user: str, session_key: str | None) -> dict:
-    provider = llm.route(has_image=False)
-    if provider is None:
-        raise HTTPException(503, "Tutor offline: add a free GROQ_API_KEY to .env to enable it.")
+    candidates = llm.providers()
+    if not candidates:
+        raise HTTPException(503, OFFLINE)
     if not _allow(session_key or "anonymous"):
         raise HTTPException(429, _busy_message()["message"])
-    try:
-        res = llm.make_client(provider).chat.completions.create(
-            model=provider.model,
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            response_format={"type": "json_object"}, temperature=0.4, max_tokens=1500,
-        )
-    except openai.RateLimitError:
-        raise HTTPException(429, _busy_message()["message"]) from None
-    except openai.APIError as err:
-        raise HTTPException(502, f"The tutor could not answer: {err.message}") from None
+    for n, provider in enumerate(candidates):
+        backup_left = n < len(candidates) - 1
+        try:
+            res = llm.make_client(provider, max_retries=1 if backup_left else 3).chat.completions.create(
+                model=provider.model,
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+                response_format={"type": "json_object"}, temperature=0.4, max_tokens=2 * MAX_TOKENS,
+            )
+            break
+        except openai.APIError as err:
+            if backup_left:
+                continue
+            if isinstance(err, openai.RateLimitError):
+                raise HTTPException(429, _busy_message()["message"]) from None
+            raise HTTPException(502, f"The tutor could not answer: {err.message}") from None
     try:
         return json.loads(res.choices[0].message.content or "{}")
     except json.JSONDecodeError:

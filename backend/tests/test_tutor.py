@@ -59,14 +59,14 @@ def _session_with_results(params):
     return sid
 
 
-def test_routing_prefers_groq_for_text_and_gemini_for_images(monkeypatch):
-    assert llm.route(False) is None and llm.status()["enabled"] is False
+def test_gemini_answers_first_and_groq_is_the_backup(monkeypatch):
+    assert llm.route() is None and llm.status()["enabled"] is False
     monkeypatch.setenv("GROQ_API_KEY", "g")
-    assert llm.route(True).name == "groq"  # only one key: everything goes there
+    assert [p.name for p in llm.providers()] == ["groq"]  # only one key: it answers everything
+    assert llm.status() == {"enabled": True, "text_provider": "groq", "backup_provider": None, "vision_provider": None}
     monkeypatch.setenv("GEMINI_API_KEY", "m")
-    assert llm.route(False).name == "groq"
-    assert llm.route(True).name == "gemini"
-    assert llm.status() == {"enabled": True, "text_provider": "groq", "vision_provider": "gemini"}
+    assert [p.name for p in llm.providers()] == ["gemini", "groq"]
+    assert llm.status() == {"enabled": True, "text_provider": "gemini", "backup_provider": "groq", "vision_provider": "gemini"}
 
 
 def test_offline_without_keys():
@@ -104,7 +104,7 @@ def test_chat_streams_text_and_action_cards(monkeypatch, sample, params):
         _chunk("Look at "), _chunk("Pz."),
         _chunk(tool=("propose_params", json.dumps({"changes": {"h_freq": 15.0}, "title": "Low-pass 15 Hz", "watch": "smoother"}))),
     ])
-    monkeypatch.setattr(llm, "make_client", lambda provider: fake)
+    monkeypatch.setattr(llm, "make_client", lambda provider, **kw: fake)
     sid = _session_with_results(params)
     res = client.post("/api/tutor/chat", json={"session_id": sid, "step": "erp", "messages": [{"role": "user", "content": "why?"}]})
     events = _events(res.text)
@@ -116,20 +116,48 @@ def test_chat_streams_text_and_action_cards(monkeypatch, sample, params):
 
 def test_image_goes_to_gemini_and_is_dropped_for_groq(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "g")
-    seen = []
-    monkeypatch.setattr(llm, "make_client", lambda p: seen.append(p.name) or FakeClient(chunks=[_chunk("ok")]))
+    sent = []
+    def fake(p, **kw):
+        client_ = FakeClient(chunks=[_chunk("ok")])
+        create = client_.chat.completions.create
+        client_.chat.completions.create = lambda **k: sent.append((p.name, isinstance(k["messages"][-1]["content"], list))) or create(**k)
+        return client_
+    monkeypatch.setattr(llm, "make_client", fake)
     body = {"messages": [{"role": "user", "content": "explain"}], "plot": {"name": "erp", "png_base64": "aGk="}}
     client.post("/api/tutor/chat", json=body)
     monkeypatch.setenv("GEMINI_API_KEY", "m")
     routes._cache.clear()
     client.post("/api/tutor/chat", json=body)
-    assert seen == ["groq", "gemini"]
+    assert sent == [("groq", False), ("gemini", True)]  # Groq gets the text only; Gemini sees the image
+
+
+def _rate_limited():
+    return openai.RateLimitError("slow down", response=httpx.Response(429, request=httpx.Request("POST", "http://x")), body=None)
+
+
+def test_a_busy_gemini_hands_the_question_to_groq(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "g")
+    monkeypatch.setenv("GEMINI_API_KEY", "m")
+    routes._cache.clear()
+    fakes = {"gemini": FakeClient(error=_rate_limited()), "groq": FakeClient(chunks=[_chunk("from the backup")])}
+    retries = {}
+    def make(p, max_retries=3):
+        retries[p.name] = max_retries
+        return fakes[p.name]
+    monkeypatch.setattr(llm, "make_client", make)
+    events = _events(client.post("/api/tutor/chat", json={"messages": [{"role": "user", "content": "hi"}]}).text)
+    assert events == [("delta", {"text": "from the backup"}), ("done", {"provider": "groq"})]
+    assert retries == {"gemini": 1, "groq": 3}  # the first provider gives up quickly when a backup waits
+
+    good = {"score": 2, "feedback": "Right."}
+    fakes["groq"] = FakeClient(json_reply=good)
+    assert client.post("/api/tutor/grade", json={"question": "q", "answer": "a"}).json() == good
 
 
 def test_rate_limit_becomes_busy_event(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "g")
     err = openai.RateLimitError("slow down", response=httpx.Response(429, request=httpx.Request("POST", "http://x")), body=None)
-    monkeypatch.setattr(llm, "make_client", lambda p: FakeClient(error=err))
+    monkeypatch.setattr(llm, "make_client", lambda p, **kw: FakeClient(error=err))
     res = client.post("/api/tutor/chat", json={"messages": [{"role": "user", "content": "hi"}]})
     assert _events(res.text)[0] == ("error", {"kind": "busy", "message": routes._busy_message()["message"]})
 
@@ -137,8 +165,50 @@ def test_rate_limit_becomes_busy_event(monkeypatch):
 def test_quiz_output_is_validated(monkeypatch):
     monkeypatch.setenv("GROQ_API_KEY", "g")
     good = {"questions": [{"question": "Q?", "options": ["a", "b", "c", "d"], "answer_index": 2, "explanation": "because"}]}
-    monkeypatch.setattr(llm, "make_client", lambda p: FakeClient(json_reply=good))
+    monkeypatch.setattr(llm, "make_client", lambda p, **kw: FakeClient(json_reply=good))
     assert client.post("/api/tutor/quiz", json={"n": 1}).json() == good
     bad = {"questions": [{"question": "Q?", "options": ["a", "b"], "answer_index": 7, "explanation": ""}]}
-    monkeypatch.setattr(llm, "make_client", lambda p: FakeClient(json_reply=bad))
+    monkeypatch.setattr(llm, "make_client", lambda p, **kw: FakeClient(json_reply=bad))
     assert client.post("/api/tutor/quiz", json={"n": 1}).status_code == 502
+
+
+def test_a_suggestion_written_as_json_still_becomes_a_card(monkeypatch, sample, params):
+    """Some models write the suggestion into their reply instead of calling the tool."""
+    monkeypatch.setenv("GROQ_API_KEY", "g")
+    written = json.dumps({"changes": {"reject_uv": 200}, "title": "Raise the threshold", "watch": "kept epochs"})
+    fake = FakeClient(chunks=[_chunk("Try a higher threshold.\n\n```json\n"), _chunk(written), _chunk("\n```")])
+    monkeypatch.setattr(llm, "make_client", lambda provider, **kw: fake)
+    sid = _session_with_results(params)
+    res = client.post("/api/tutor/chat", json={"session_id": sid, "step": "epoching", "messages": [{"role": "user", "content": "threshold?"}]})
+    actions = [data for event, data in _events(res.text) if event == "action"]
+    assert actions == [{"changes": {"reject_uv": 200}, "title": "Raise the threshold", "watch": "kept epochs"}]
+
+
+def test_a_written_suggestion_with_invalid_settings_is_ignored(params):
+    from erp_module.tutor.tools import proposal_in_text
+
+    assert proposal_in_text("No JSON here.") is None
+    assert proposal_in_text('Set {"changes": {"l_freq": 50}} please') == '{"changes": {"l_freq": 50}}'
+    assert to_event("propose_params", proposal_in_text('{"changes": {"l_freq": 50}}'), params) is None
+
+
+def test_a_reply_that_is_only_a_card_gets_a_line_of_text(monkeypatch, sample, params):
+    monkeypatch.setenv("GROQ_API_KEY", "g")
+    fake = FakeClient(chunks=[_chunk(tool=("propose_params", json.dumps({"changes": {"reject_uv": 200}, "title": "Raise it", "watch": "kept"})))])
+    monkeypatch.setattr(llm, "make_client", lambda provider, **kw: fake)
+    sid = _session_with_results(params)
+    events = _events(client.post("/api/tutor/chat", json={"session_id": sid, "messages": [{"role": "user", "content": "?"}]}).text)
+    kinds = [event for event, _ in events]
+    assert kinds == ["delta", "action", "done"]
+    assert events[0][1]["text"].startswith("Here is an experiment to try")
+
+
+def test_filter_suggestions_use_plain_names_and_map_back(params):
+    from erp_module.tutor.tools import TOOLS
+
+    schema = TOOLS[0]["function"]["parameters"]["properties"]["changes"]["properties"]
+    assert "high_pass_hz" in schema and "low_pass_hz" in schema and "h_freq" not in schema
+    event = to_event("propose_params", json.dumps({"changes": {"high_pass_hz": 1.0}, "title": "HP 1 Hz", "watch": "P3"}), params)
+    assert event[1]["changes"] == {"l_freq": 1.0}
+    event = to_event("propose_params", json.dumps({"changes": {"low_pass_hz": 0}, "title": "Low-pass off", "watch": "noise"}), params)
+    assert event[1]["changes"] == {"h_freq": 0}

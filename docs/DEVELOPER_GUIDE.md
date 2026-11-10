@@ -131,7 +131,8 @@ when the dataset has all of its condition names.
 `core/pipeline.py` and `core/codegen.py` (keep the script identical to the app, `test_codegen.py` checks
 this), mirror it in `frontend/src/lib/types.ts` and `BASE_PARAMS`, and add a control in the step's panel.
 
-**Change the tutor's models**: set `TUTOR_TEXT_MODEL` (Groq) or `TUTOR_VISION_MODEL` (Gemini) in `.env`.
+**Change the tutor's models**: set `TUTOR_VISION_MODEL` (Gemini, which answers first) or `TUTOR_TEXT_MODEL` (Groq,
+the backup) in `.env`. Groq retires models often; list the current ones with its `/models` endpoint.
 Defaults live in `backend/erp_module/tutor/client.py`. Free-tier model names change; if the tutor reports
 an unknown model, pick a current one from the provider's model list.
 

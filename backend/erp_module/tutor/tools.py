@@ -10,9 +10,12 @@ from ..schemas import ProcessParams
 
 STEPS = ["load", "events", "epoching", "erp", "learn", "export"]
 PLOTS = ["raw", "erp_image", "erp", "topomap", "r2"]
+# Names the model sees for the two filters. ProcessParams calls them l_freq / h_freq, which models confuse
+# ("h" reads as high-pass), so the tool uses plain names and to_event maps them back.
+ALIASES = {"high_pass_hz": "l_freq", "low_pass_hz": "h_freq"}
 TUNABLE = {
-    "l_freq": {"type": "number", "description": "High-pass cut-off in Hz (0 = off)"},
-    "h_freq": {"type": "number", "description": "Low-pass cut-off in Hz (0 = off)"},
+    "high_pass_hz": {"type": "number", "description": "High-pass cut-off in Hz, removes slow drift (0 = off)"},
+    "low_pass_hz": {"type": "number", "description": "Low-pass cut-off in Hz, removes fast noise (0 = off)"},
     "reference": {"type": "string", "description": '"average", "none" or a channel name'},
     "tmin": {"type": "number", "description": "Epoch start in seconds (negative)"},
     "tmax": {"type": "number", "description": "Epoch end in seconds"},
@@ -76,6 +79,22 @@ TOOLS = [
 ]
 
 
+def proposal_in_text(text: str) -> str | None:
+    """A parameter suggestion the model wrote as JSON in its reply instead of calling propose_params.
+
+    Some models do this despite the instructions; returning the arguments lets the app still show a card.
+    """
+    decoder = json.JSONDecoder()
+    for start in (i for i, ch in enumerate(text) if ch == "{"):
+        try:
+            value, _ = decoder.raw_decode(text[start:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and isinstance(value.get("changes"), dict):
+            return json.dumps(value)
+    return None
+
+
 def to_event(name: str, arguments: str, current_params: dict | None) -> tuple[str, dict] | None:
     """Validate one tool call and turn it into an (event, payload) pair; None if it is invalid."""
     try:
@@ -87,7 +106,10 @@ def to_event(name: str, arguments: str, current_params: dict | None) -> tuple[st
 
     if name == "propose_params":
         changes = args.get("changes")
-        if not isinstance(changes, dict) or not changes or not set(changes) <= set(TUNABLE) or current_params is None:
+        if not isinstance(changes, dict) or not changes or current_params is None:
+            return None
+        changes = {ALIASES.get(k, k): v for k, v in changes.items()}
+        if not set(changes) <= {ALIASES.get(k, k) for k in TUNABLE}:
             return None
         try:
             ProcessParams(**{**current_params, **changes})

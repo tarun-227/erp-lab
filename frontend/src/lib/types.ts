@@ -124,7 +124,10 @@ export interface ExportResult {
 
 export interface TutorStatus {
   enabled: boolean
+  /** Answers first. */
   text_provider: string | null
+  /** Takes over when the first is busy or unavailable. */
+  backup_provider?: string | null
   vision_provider: string | null
 }
 

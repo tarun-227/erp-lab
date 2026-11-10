@@ -124,6 +124,7 @@ emerge from the noise.
 The tutor is off unless the person running the app adds free API keys (see the README). When it is on:
 
 - It sees your current step, parameters and summary numbers (kept/rejected counts, peaks), never the raw EEG.
+- Gemini answers; if it is busy, Groq answers instead. The label at the top of the Tutor tab shows which are set up.
 - **Socratic mode** (on by default) gives hints and questions before answers.
 - It can suggest an experiment as a card with **Apply** and **Undo**; it never changes anything by itself.
 - **Explain this plot** sends a picture of the plot (to Gemini, if a Gemini key is set) together with the numbers.

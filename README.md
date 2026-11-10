@@ -15,7 +15,7 @@ processing choice changes the result. An optional AI tutor explains the student'
 - **Explain panel** for every step, concept cards, "Try this" experiments and a quiz
 - **Export**: a standalone MNE-Python script that reproduces the app's ERP exactly, the recording,
   parameters JSON, a share link, and results as CSV/PNG
-- **AI tutor** (optional, free): Groq for chat, Gemini for "Explain this plot" images
+- **AI tutor** (optional, free): Gemini answers questions and explains plot images; Groq takes over automatically when Gemini is busy
 
 ## Run it
 
@@ -40,8 +40,11 @@ docker compose up --build
 
 Copy `.env.example` to `.env` and add free keys:
 
-- `GROQ_API_KEY` from https://console.groq.com/keys (chat, quizzes, grading)
-- `GEMINI_API_KEY` from https://aistudio.google.com/apikey (lets "Explain this plot" see the plot image)
+- `GEMINI_API_KEY` from https://aistudio.google.com/apikey: answers chat, quizzes and grading, and sees the plot
+  image for "Explain this plot"
+- `GROQ_API_KEY` from https://console.groq.com/keys: the backup, used when Gemini hits its free-tier limit
+
+Either key alone is enough. Put keys only in `.env` (git-ignored), never in `.env.example`, which is committed.
 
 Restart the app. Without keys the tutor shows as offline and everything else works.
 The tutor receives parameters and summary numbers only, never raw EEG.

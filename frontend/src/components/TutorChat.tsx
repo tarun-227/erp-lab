@@ -13,6 +13,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { useTutor, useTutorStatus } from '@/hooks/useTutor'
+import { Markdown } from './Markdown'
 import { STEPS, type StepId } from '@/lib/steps'
 import { cn } from '@/lib/utils'
 import { type TutorAction, type TutorMessage, useAppStore } from '@/store/useAppStore'
@@ -50,8 +51,8 @@ function MessageView({ m }: { m: TutorMessage }) {
   return (
     <div className="mr-6 space-y-2">
       {(m.content || m.streaming) && (
-        <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap">
-          {m.content}
+        <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5 text-[15px] leading-relaxed">
+          <Markdown text={m.content} />
           {m.streaming && <span className="bg-foreground/60 ml-0.5 inline-block h-3.5 w-1.5 animate-pulse align-middle" />}
         </div>
       )}
@@ -122,7 +123,7 @@ export function TutorChat() {
         </span>
         <p className="font-heading text-lg font-extrabold">Tutor offline</p>
         <p className="text-muted-foreground mt-1.5 max-w-72 text-[15px] leading-snug">
-          Add a free Groq key (and optionally a Gemini key for plot images) to <code>.env</code>, then restart the app.
+          Add a free Gemini key (and optionally a Groq key as a backup) to <code>.env</code>, then restart the app.
           Everything else works without it.
         </p>
       </div>
@@ -137,7 +138,7 @@ export function TutorChat() {
           {socratic ? 'Socratic: hints first' : 'Direct answers'}
         </label>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">{status.text_provider}{status.vision_provider ? ` + ${status.vision_provider}` : ''}</span>
+          <span className="text-muted-foreground text-xs">{status.text_provider}{status.backup_provider ? ` · backup ${status.backup_provider}` : ''}</span>
           <Button variant="ghost" size="icon-xs" aria-label="Clear conversation" disabled={!messages.length || busy} onClick={clear}>
             <Trash2Icon />
           </Button>

@@ -1,9 +1,10 @@
 """Free LLM providers behind one OpenAI-compatible client.
 
-Groq handles text (chat, quizzes, grading); Gemini handles requests that carry a
-plot image. If only one key is set, everything goes to that provider. Keys are read
-from the environment on every call, so adding a key to .env and restarting is enough.
-GROQ_BASE_URL / GEMINI_BASE_URL can point either slot at another OpenAI-compatible server.
+Gemini answers first: in testing it gave a written answer every time and got facts such as the direction of
+the rejection threshold right, and it can see plot images. Groq is the backup, used when Gemini is at its
+free-tier limit or unavailable, or when it is the only key set. Keys are read from the environment on every
+call, so adding a key to .env and restarting is enough. GROQ_BASE_URL / GEMINI_BASE_URL can point either slot
+at another OpenAI-compatible server.
 """
 
 from __future__ import annotations
@@ -15,7 +16,8 @@ from openai import OpenAI
 
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
-DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile"
+# Groq retires models often (llama-3.3-70b-versatile went in 2026); TUTOR_TEXT_MODEL overrides this.
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 
@@ -42,22 +44,28 @@ def _gemini() -> Provider | None:
     return Provider("gemini", base, key, model, vision=True) if key else None
 
 
-def route(has_image: bool) -> Provider | None:
-    groq, gemini = _groq(), _gemini()
-    if has_image:
-        return gemini or groq
-    return groq or gemini
+def providers() -> list[Provider]:
+    """The providers with a key, in the order to try them: Gemini, then Groq as the backup."""
+    return [p for p in (_gemini(), _groq()) if p]
+
+
+def route() -> Provider | None:
+    found = providers()
+    return found[0] if found else None
 
 
 def status() -> dict:
-    text, vision = route(False), route(True)
+    found = providers()
+    vision = next((p for p in found if p.vision), None)
     return {
-        "enabled": text is not None,
-        "text_provider": text.name if text else None,
-        "vision_provider": vision.name if vision and vision.vision else None,
+        "enabled": bool(found),
+        "text_provider": found[0].name if found else None,
+        "backup_provider": found[1].name if len(found) > 1 else None,
+        "vision_provider": vision.name if vision else None,
     }
 
 
-def make_client(provider: Provider) -> OpenAI:
-    # The SDK retries 429s and 5xx with exponential backoff before raising.
-    return OpenAI(base_url=provider.base_url, api_key=provider.api_key, max_retries=3, timeout=60)
+def make_client(provider: Provider, max_retries: int = 3) -> OpenAI:
+    # The SDK retries 429s and 5xx with exponential backoff before raising. With a backup provider waiting,
+    # callers pass fewer retries so a busy provider hands over quickly.
+    return OpenAI(base_url=provider.base_url, api_key=provider.api_key, max_retries=max_retries, timeout=60)

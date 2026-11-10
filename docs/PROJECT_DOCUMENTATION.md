@@ -77,7 +77,7 @@ Browser (React + TypeScript)                     Server (FastAPI + MNE-Python)
 │ Guide, Tutor, Quiz             │ ◄──────────► │              tools, streaming      │
 └────────────────────────────────┘              └──────────────┬────────────────────┘
                                                                │ summaries, plot image
-                                                     Groq (text) / Gemini (images), optional
+                                                     Gemini, with Groq as backup, optional
 ```
 
 The work is split so that the interface stays responsive. The server does filtering and epoching, which are
@@ -318,7 +318,7 @@ API keys it shows as offline and the rest of the app is unaffected.
 
 | Aspect | Implementation |
 |---|---|
-| Providers | Groq for text (`llama-3.3-70b-versatile`), Gemini for requests with a plot image (`gemini-2.5-flash`); if only one key is set it handles everything |
+| Providers | Gemini (`gemini-2.5-flash`) answers first and sees plot images; Groq (`openai/gpt-oss-120b`) takes over when Gemini is rate-limited or unavailable; either key alone works |
 | Modes | Socratic (hints first, on by default) or direct |
 | Context sent | Experiment description, step, settings, drop counts, measurements. No raw EEG or per-trial data |
 | Plot image | Sent to Gemini only when the student presses "Explain this plot" |
@@ -504,7 +504,7 @@ cd frontend && npx playwright test
 
 | Item | Status |
 |---|---|
-| Tutor with real Groq and Gemini keys | **Not tested.** Verified only with mocked and fake OpenAI-compatible servers |
+| Tutor with real keys | Tested on 10 November 2026 with six questions in both modes, plot explanation, quiz and grading. Gemini gave correct written answers every time; Groq's `gpt-oss-120b` sometimes replied with only a suggestion card and twice got the threshold direction wrong, so it is the backup |
 | Docker image | **Not run**, because Docker is not available on the development machine |
 | Streamlit embed | **Not run** |
 | Merge into the shared course repository | **Not done** |
