@@ -4,9 +4,11 @@ Interactive web module for **CS5109 Brain–Computer Interfaces**, Option A, top
 Students load EEG, cut it into epochs, average them into event-related potentials, and see how every
 processing choice changes the result. An optional AI tutor explains the student's own results.
 
+**Team T²A:** Tarun Sekar S.D, Ajwad Hussain, Tarun Nixon. Who did what: [CONTRIBUTION.md](CONTRIBUTION.md), signed copy in [docs/Contribution.pdf](docs/Contribution.pdf).
+
 - **Six guided steps**: Load → Events → Epoching → ERP → Learn & Quiz → Export
-- **Data**: a bundled ERP CORE flanker recording (stimulus- and response-locked events, with an ERN after
-  errors), or your own `.fif` / `.edf` / `.bdf` / `.set` / BrainVision file
+- **Data**: three bundled real recordings (ERP CORE flanker with an ERN after errors, auditory oddball with a
+  P300, and SSVEP), or your own `.fif` / `.edf` / `.bdf` / `.set` / BrainVision file
 - **Linked, live plots**: raw EEG with epoch windows ↔ ERP image of every trial; ERP waveforms ↔ animated
   scalp map ↔ signed r² channel × time map; drop log; noise vs 1/√N
 - **Measurements**: mean amplitude with its SME (data quality), peak latency and amplitude, 50% area latency
@@ -19,6 +21,9 @@ processing choice changes the result. An optional AI tutor explains the student'
 
 ## Run it
 
+Requirements: Python 3.10+ and Node.js 22+ (Docker works instead of both). No GPU, no account and no API key
+are needed.
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -27,14 +32,35 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Then open http://localhost:8000. The first run installs the frontend packages and builds the app
-(needs Node.js 22+). Requires Python 3.10+.
+Then open http://localhost:8000. The first run installs the frontend packages and builds the app, which takes
+a few minutes; later runs start in seconds. Stop with Ctrl+C.
+
+Options for `run.py`: `--port 9000` to change the port, `--rebuild` to force a fresh frontend build, and
+`--dev` for hot reload while developing (frontend at http://localhost:5173).
 
 With Docker instead (no Python or Node needed):
 
 ```bash
 docker compose up --build
 ```
+
+### Quick start in the app
+
+1. On **Step 1**, pick a sample (for example *Auditory oddball*) and click **Load sample recording**.
+2. Press **2** to **4** (or use the step bar) to see events, epochs and the ERP.
+3. Drag any slider in the **Controls** tab; the plots update live. Open the **Guide** tab for an explanation
+   of the current step.
+4. Press **6** (Export) to download a Python script that reproduces your ERP.
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `npm was not found` | Install Node.js 22+ from https://nodejs.org, or use Docker |
+| Port 8000 is busy | `python run.py --port 9000` |
+| Page looks out of date after an update | Hard refresh (Ctrl+Shift+R) |
+| Tutor shows "offline" | No key in `.env`; the rest of the app works without it |
+| Upload rejected | Use `.fif`, `.edf`, `.bdf`, `.set` or BrainVision files that contain events or annotations |
 
 ## AI tutor (optional)
 
@@ -63,7 +89,7 @@ cd frontend && npm test
 cd frontend && npx playwright test
 ```
 
-94 backend tests (pytest), 21 frontend unit tests (Vitest), and 6 Playwright end-to-end tests: a run through
+100 backend tests (pytest), 26 frontend unit tests (Vitest), and 6 Playwright end-to-end tests: a run through
 all six steps, a load of each sample, and an automated accessibility check (axe, WCAG 2.2 AA) of every step
 in light and dark themes. See the developer guide for details.
 
@@ -75,7 +101,7 @@ in light and dark themes. See the developer guide for details.
 - [Design system](design-system/erp-lab/MASTER.md): colours, type, components and accessibility rules
   behind the interface
 - [Demo script](docs/DEMO.md): the 10-minute demo and likely viva questions
-- [Contribution statement](CONTRIBUTION.md)
+- [Contribution statement](CONTRIBUTION.md) and the [signed PDF](docs/Contribution.pdf)
 
 ## Project layout
 
@@ -116,5 +142,6 @@ Built with MNE-Python, FastAPI, React, Plotly, Tailwind CSS and shadcn/ui.
 
 ## Use of AI
 
-AI assistance (Claude Code) was used while developing this module. The AI tutor inside the app is a
-feature for students and uses free Groq and Gemini models.
+AI assistance (Claude Code) was used during development for code and documentation. The team reviewed and
+tested the result and can explain it. The AI tutor inside the app is a separate, optional feature for
+students; it uses free Gemini and Groq models.

@@ -1,15 +1,14 @@
 # Contribution statement
 
-CS5109 Brain–Computer Interfaces, Option A, topic 4 (Epoching and ERP).
+CS5109 Brain–Computer Interfaces, Option A, topic 4 (Epoching and ERP). Team: T²A.
 
-Each member fills in their own row and signs off. Keep it to one page.
+The signed copy of this statement is [docs/Contribution.pdf](docs/Contribution.pdf).
 
-| Member | Roll number | Main responsibilities | Key files or features | Share of work |
-|---|---|---|---|---|
-| | | Frontend: step screens, linked plots, interaction design | `frontend/src/steps/`, `frontend/src/plots/` | |
-| | | Backend: MNE pipeline, API, exported script | `backend/erp_module/core/`, `api.py` | |
-| | | Teaching content and AI tutor | `frontend/src/content/`, `backend/erp_module/tutor/` | |
-| | | Testing, CI, Docker, documentation, demo | `backend/tests/`, `frontend/e2e/`, `docs/` | |
+| Member | Roll number | Main responsibilities | Key files or features |
+|---|---|---|---|
+| Tarun Sekar S.D | CS24B2028 | Frontend and interface: the six step screens, the linked plots (raw EEG, ERP image, ERP waveforms, scalp map, signed r² map), interaction design, design system and accessibility | `frontend/src/steps/`, `frontend/src/plots/`, `design-system/` |
+| Ajwad Hussain | CS24B2002 | Backend and EEG processing: loading and cleaning recordings, filtering, epoching, artifact rejection, ERP measurements, scalp-map interpolation, API, sessions and the exported MNE script; backend tests | `backend/erp_module/core/`, `backend/erp_module/api.py`, `backend/tests/` |
+| Tarun Nixon | CS24B2013 | Teaching content, AI tutor and delivery: explanations, concept cards, experiments and quiz; the tutor; sample datasets; CI, Docker, documentation and demo | `frontend/src/content/`, `backend/erp_module/tutor/`, `scripts/`, `docs/`, `.github/`, `Dockerfile` |
 
 ## Use of AI
 
@@ -19,11 +18,4 @@ calls free Groq and Gemini models.
 
 ## Sign-off
 
-We confirm that this statement reflects our contributions.
-
-| Member | Signature | Date |
-|---|---|---|
-| | | |
-| | | |
-| | | |
-| | | |
+All three members signed the statement; see [docs/Contribution.pdf](docs/Contribution.pdf).
